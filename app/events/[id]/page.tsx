@@ -39,6 +39,5 @@ export default async function EventPage({ params }: Props) {
       <section className="invite-notes" aria-labelledby="preparation-title"><h2 id="preparation-title">Заметки и подготовка</h2>{shoot.notes.trim() ? <p>{shoot.notes}</p> : <p className="invite-notes-empty">Дополнительная подготовка не указана.</p>}</section>
       <p className="invite-footnote">Здесь показано актуальное расписание. Добавленное вручную событие не обновляется автоматически — при переносе съёмки проверьте дату по этой ссылке.</p>
     </article>
-    <a className="invite-back" href="/">← Всё расписание Gost Home</a>
   </main>;
 }
