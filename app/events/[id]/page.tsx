@@ -30,6 +30,7 @@ export default async function EventPage({ params }: Props) {
   return <main className="invitation">
     <a className="invite-brand" href="/">GOST HOME<span>CONTENT STUDIO</span></a>
     <article className="invite-card">
+      {active ? <section className="invite-add"><a className="primary invite-button" href={`/events/${encodeURIComponent(shoot.id)}/calendar.ics`}>＋ Добавить в календарь iPhone</a><p className="invite-reminder">◷ Напоминание за 24 часа до начала</p><p className="invite-help">Откройте ссылку в Safari на iPhone, нажмите кнопку и подтвердите добавление события. Если файл сначала скачался, откройте его, чтобы добавить событие.</p><p className="invite-help">Событие также можно открыть в Apple Calendar на Mac и в других календарях, поддерживающих этот формат.</p></section> : <div className="invite-inactive">{cancelled ? 'Съёмка отменена. Добавление в календарь недоступно.' : finished ? 'Эта съёмка уже завершилась.' : 'Съёмка уже началась.'}</div>}
       <div className="invite-top"><span className="eyebrow">ПРИГЛАШЕНИЕ НА СЪЁМКУ</span><span className="invite-badge">{cancelled ? 'Отменена' : finished ? 'Завершилась' : started ? 'Идёт сейчас' : shoot.status}</span></div>
       <h1>{shoot.title}</h1>
       <p className="invite-date">{date.format(start)}</p>
@@ -37,7 +38,6 @@ export default async function EventPage({ params }: Props) {
       <p className="invite-zone">Время Бангкока · UTC+7</p>
       <dl className="invite-details"><div><dt>Формат</dt><dd>{shoot.format}</dd></div><div><dt>Участники</dt><dd>{shoot.participants.join(' · ')}</dd></div>{projects.length > 0 && <div><dt>Проекты</dt><dd>{projects.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}{locations.length > 0 && <div><dt>Локации</dt><dd>{locations.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}</dl>
       <section className="invite-notes" aria-labelledby="preparation-title"><h2 id="preparation-title">Заметки и подготовка</h2>{shoot.notes.trim() ? <p>{shoot.notes}</p> : <p className="invite-notes-empty">Дополнительная подготовка не указана.</p>}</section>
-      {active ? <section className="invite-add"><p className="invite-reminder">◷ Напоминание за 24 часа до начала</p><a className="primary invite-button" href={`/events/${encodeURIComponent(shoot.id)}/calendar.ics`}>＋ Добавить в календарь iPhone</a><p className="invite-help">Откройте ссылку в Safari на iPhone, нажмите кнопку и подтвердите добавление события. Если файл сначала скачался, откройте его, чтобы добавить событие.</p><p className="invite-help">Событие также можно открыть в Apple Calendar на Mac и в других календарях, поддерживающих этот формат.</p></section> : <div className="invite-inactive">{cancelled ? 'Съёмка отменена. Добавление в календарь недоступно.' : finished ? 'Эта съёмка уже завершилась.' : 'Съёмка уже началась.'}</div>}
       <ShareEvent id={shoot.id} title={shoot.title} />
       <p className="invite-footnote">Здесь показано актуальное расписание. Добавленное вручную событие не обновляется автоматически — при переносе съёмки проверьте дату по этой ссылке.</p>
     </article>
