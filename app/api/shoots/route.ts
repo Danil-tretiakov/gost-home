@@ -1,3 +1,4 @@
+import { normalizeShootValues, storeShootValues } from '../../../lib/shoot-values';
 import { canEditCalendar } from '../../permissions';
 import { getDb } from '../../../db';
 import { shoots } from '../../../db/schema';
@@ -10,7 +11,7 @@ export async function GET(){try{return Response.json(await getDb().select().from
 export async function POST(req:Request){
  if(!safe(req)||!(await canEditCalendar()))return Response.json({error:'Редактировать календарь может только владелец'},{status:403});
  try{const x:any=await req.json();if(!valid(x))return Response.json({error:'Проверьте поля съёмки'},{status:400});
- const values={title:x.title.trim(),date:x.date,time:x.time,duration:x.duration,format:x.format,status:x.status,project:x.project.trim(),location:x.location.trim(),participants:[...new Set<string>(x.participants)],notes:x.notes};
+ const values={title:x.title.trim(),date:x.date,time:x.time,duration:x.duration,format:x.format,status:x.status,project:storeShootValues(normalizeShootValues(x.project)),location:storeShootValues(normalizeShootValues(x.location)),participants:[...new Set<string>(x.participants)],notes:x.notes};
  if(x.id){const rows=await getDb().update(shoots).set({...values,revision:x.revision+1}).where(and(eq(shoots.id,x.id),eq(shoots.revision,x.revision))).returning();if(!rows.length)return Response.json({error:'Запись уже изменена. Обновите календарь и откройте её снова.'},{status:409});return Response.json(rows[0]);}
  const [row]=await getDb().insert(shoots).values({...values,id:crypto.randomUUID()}).returning();return Response.json(row,{status:201});
  }catch{return Response.json({error:'Не удалось сохранить. Повторите попытку.'},{status:503});}}
