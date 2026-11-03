@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { getShootById } from '../../../lib/get-shoot';
 import { eventTimes } from '../../../lib/event-calendar';
 import { normalizeShootValues } from '../../../lib/shoot-values';
-import ShareEvent from '../../share-event';
 export const dynamic = 'force-dynamic';
 type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -38,7 +37,6 @@ export default async function EventPage({ params }: Props) {
       <p className="invite-zone">Время Бангкока · UTC+7</p>
       <dl className="invite-details"><div><dt>Формат</dt><dd>{shoot.format}</dd></div><div><dt>Участники</dt><dd>{shoot.participants.join(' · ')}</dd></div>{projects.length > 0 && <div><dt>Проекты</dt><dd>{projects.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}{locations.length > 0 && <div><dt>Локации</dt><dd>{locations.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}</dl>
       <section className="invite-notes" aria-labelledby="preparation-title"><h2 id="preparation-title">Заметки и подготовка</h2>{shoot.notes.trim() ? <p>{shoot.notes}</p> : <p className="invite-notes-empty">Дополнительная подготовка не указана.</p>}</section>
-      <ShareEvent id={shoot.id} title={shoot.title} />
       <p className="invite-footnote">Здесь показано актуальное расписание. Добавленное вручную событие не обновляется автоматически — при переносе съёмки проверьте дату по этой ссылке.</p>
     </article>
     <a className="invite-back" href="/">← Всё расписание Gost Home</a>
