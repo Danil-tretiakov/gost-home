@@ -33,7 +33,7 @@ export default function ShareEvent({ id, title }: { id: string; title: string })
   return <div className="share-event">
     <button type="button" className="share-open" onClick={showLink} aria-expanded={show}>↗ Поделиться событием</button>
     {show && <div className="share-panel">
-      <p>По ссылке откроются детали съёмки и кнопка подписки в Apple Календаре.</p>
+      <p>По ссылке откроются детали съёмки и кнопка добавления события в календарь.</p>
       <label>Ссылка на событие<input readOnly value={url} onFocus={e => e.currentTarget.select()} /></label>
       <div className="share-actions"><button type="button" onClick={copyLink}>Копировать ссылку</button><button type="button" disabled={sharing} onClick={shareLink}>Отправить…</button><a href={`/events/${encodeURIComponent(id)}`} target="_blank" rel="noopener noreferrer">Открыть</a></div>
       <p role="status" aria-live="polite">{message}</p>
