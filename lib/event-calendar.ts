@@ -12,6 +12,7 @@ export type CalendarShoot = {
   location: string;
   participants: string[];
   notes: string;
+  preparation?: string;
   revision: number;
 };
 
@@ -74,7 +75,8 @@ export function eventCalendar(shoot: CalendarShoot, eventUrl: string, now: Date 
     `Статус: ${shoot.status}`,
     shoot.participants.length ? `Участники: ${shoot.participants.join(', ')}` : '',
     projects.length ? `Проекты: ${projects.join(', ')}` : '',
-    shoot.notes ? `Заметки: ${shoot.notes}` : '',
+    shoot.preparation?.trim() ? `Подготовка актёров: ${shoot.preparation}` : '',
+    shoot.notes.trim() ? `Заметки: ${shoot.notes}` : '',
     'Время съёмки указано по Бангкоку (UTC+7).',
     `Актуальные детали: ${url.href}`,
   ].filter(Boolean).join('\n');

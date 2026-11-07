@@ -36,7 +36,7 @@ export default async function EventPage({ params }: Props) {
       <p className="invite-time">{time.format(start)} — {sameDay ? time.format(end) : `${date.format(end)}, ${time.format(end)}`}</p>
       <p className="invite-zone">Время Бангкока · UTC+7</p>
       <dl className="invite-details"><div><dt>Формат</dt><dd>{shoot.format}</dd></div><div><dt>Участники</dt><dd>{shoot.participants.join(' · ')}</dd></div>{projects.length > 0 && <div><dt>Проекты</dt><dd>{projects.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}{locations.length > 0 && <div><dt>Локации</dt><dd>{locations.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}</dl>
-      <section className="invite-notes" aria-labelledby="preparation-title"><h2 id="preparation-title">Заметки и подготовка</h2>{shoot.notes.trim() ? <p>{shoot.notes}</p> : <p className="invite-notes-empty">Дополнительная подготовка не указана.</p>}</section>
+      <section className="invite-notes invite-preparation" aria-labelledby="preparation-title"><h2 id="preparation-title">Подготовка актёров</h2>{shoot.preparation.trim() ? <p>{shoot.preparation}</p> : <p className="invite-notes-empty">Особая подготовка не указана.</p>}</section><section className="invite-notes" aria-labelledby="notes-title"><h2 id="notes-title">Заметки</h2>{shoot.notes.trim() ? <p>{shoot.notes}</p> : <p className="invite-notes-empty">Заметок пока нет.</p>}</section>
       <p className="invite-footnote">Здесь показано актуальное расписание. Добавленное вручную событие не обновляется автоматически — при переносе съёмки проверьте дату по этой ссылке.</p>
     </article>
   </main>;
