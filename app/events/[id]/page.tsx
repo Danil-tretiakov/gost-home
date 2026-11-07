@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getShootById } from '../../../lib/get-shoot';
 import { eventTimes } from '../../../lib/event-calendar';
 import { normalizeShootValues } from '../../../lib/shoot-values';
+import AddToCalendar from '../../add-to-calendar';
 export const dynamic = 'force-dynamic';
 type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -29,7 +30,7 @@ export default async function EventPage({ params }: Props) {
   return <main className="invitation">
     <a className="invite-brand" href="/">GOST HOME<span>CONTENT STUDIO</span></a>
     <article className="invite-card">
-      {active ? <section className="invite-add"><a className="primary invite-button" href={`/events/${encodeURIComponent(shoot.id)}/calendar.ics`}>＋ ДОБАВИТЬ В КАЛЕНДАРЬ</a><p className="invite-reminder">◷ Напоминание за 24 часа до начала</p></section> : <div className="invite-inactive">{cancelled ? 'Съёмка отменена. Добавление в календарь недоступно.' : finished ? 'Эта съёмка уже завершилась.' : 'Съёмка уже началась.'}</div>}
+      {active ? <AddToCalendar id={shoot.id} /> : <div className="invite-inactive">{cancelled ? 'Съёмка отменена. Добавление в календарь недоступно.' : finished ? 'Эта съёмка уже завершилась.' : 'Съёмка уже началась.'}</div>}
       <div className="invite-top"><span className="eyebrow">ПРИГЛАШЕНИЕ НА СЪЁМКУ</span><span className="invite-badge">{cancelled ? 'Отменена' : finished ? 'Завершилась' : started ? 'Идёт сейчас' : shoot.status}</span></div>
       <h1>{shoot.title}</h1>
       <p className="invite-date">{date.format(start)}</p>
@@ -37,7 +38,7 @@ export default async function EventPage({ params }: Props) {
       <p className="invite-zone">Время Бангкока · UTC+7</p>
       <dl className="invite-details"><div><dt>Формат</dt><dd>{shoot.format}</dd></div><div><dt>Участники</dt><dd>{shoot.participants.join(' · ')}</dd></div>{projects.length > 0 && <div><dt>Проекты</dt><dd>{projects.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}{locations.length > 0 && <div><dt>Локации</dt><dd>{locations.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}</dl>
       <section className="invite-notes invite-preparation" aria-labelledby="preparation-title"><h2 id="preparation-title">Подготовка актёров</h2>{shoot.preparation.trim() ? <p>{shoot.preparation}</p> : <p className="invite-notes-empty">Особая подготовка не указана.</p>}</section><section className="invite-notes" aria-labelledby="notes-title"><h2 id="notes-title">Заметки</h2>{shoot.notes.trim() ? <p>{shoot.notes}</p> : <p className="invite-notes-empty">Заметок пока нет.</p>}</section>
-      <p className="invite-footnote">Здесь показано актуальное расписание. Добавленное вручную событие не обновляется автоматически — при переносе съёмки проверьте дату по этой ссылке.</p>
+      <p className="invite-footnote">Подписка в Apple Календаре получает изменения съёмки. Скорость обновления зависит от настроек календаря. Скачанная копия .ics автоматически не обновляется.</p>
     </article>
   </main>;
 }

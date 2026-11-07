@@ -61,6 +61,28 @@ function fold(line: string): string {
 
 /** A one-event import, never a meeting invitation or a calendar subscription. */
 export function eventCalendar(shoot: CalendarShoot, eventUrl: string, now: Date = new Date()): string {
+  return formatCalendar(shoot, eventUrl, now, false);
+}
+
+/** A stable, read-only single-shoot feed, including an empty calendar after deletion. */
+export function eventSubscriptionCalendar(shoot: CalendarShoot | null, eventUrl: string, now: Date = new Date()): string {
+  return formatCalendar(shoot, eventUrl, now, true);
+}
+
+function formatCalendar(shoot: CalendarShoot | null, eventUrl: string, now: Date, subscription: boolean): string {
+  const header = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Gost Home//Shoot Calendar//RU',
+    'CALSCALE:GREGORIAN',
+    ...(subscription ? [
+      `X-WR-CALNAME:${text(shoot ? `Gost Home · ${shoot.title}` : 'Gost Home · Съёмка')}`,
+      'X-WR-TIMEZONE:Asia/Bangkok',
+      'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+      'X-PUBLISHED-TTL:PT1H',
+    ] : ['METHOD:PUBLISH']),
+  ];
+  if (!shoot) return `${[...header, 'END:VCALENDAR'].map(fold).join('\r\n')}\r\n`;
   const { start, end } = eventTimes(shoot);
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(shoot.id) || !Number.isInteger(shoot.revision) || shoot.revision < 0) throw new Error('Некорректный идентификатор съёмки');
   if (/[\r\n\u0000]/.test(eventUrl)) throw new Error('Некорректная ссылка на съёмку');
@@ -81,11 +103,7 @@ export function eventCalendar(shoot: CalendarShoot, eventUrl: string, now: Date 
     `Актуальные детали: ${url.href}`,
   ].filter(Boolean).join('\n');
   const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Gost Home//Shoot Calendar//RU',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
+    ...header,
     'BEGIN:VEVENT',
     `UID:${shoot.id}@gost-home-calendar`,
     `DTSTAMP:${utc(now)}`,
@@ -98,7 +116,7 @@ export function eventCalendar(shoot: CalendarShoot, eventUrl: string, now: Date 
     `URL:${url.href}`,
     `STATUS:${cancelled ? 'CANCELLED' : 'CONFIRMED'}`,
     `TRANSP:${cancelled ? 'TRANSPARENT' : 'OPAQUE'}`,
-    ...(!cancelled && start.getTime() > now.getTime() ? [
+    ...(!cancelled && (!subscription || shoot.status !== 'Снято') && start.getTime() > now.getTime() ? [
       'BEGIN:VALARM',
       'ACTION:DISPLAY',
       'TRIGGER:-P1D',

@@ -3,7 +3,7 @@ import { build } from 'esbuild';
 
 // Bundle only this pure formatter so tests need no server, database, or browser.
 const compiled = await build({ entryPoints: ['lib/event-calendar.ts'], bundle: true, write: false, platform: 'neutral', format: 'esm', target: 'es2022' });
-const { eventTimes, eventCalendar } = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString('base64')}`);
+const { eventTimes, eventCalendar, eventSubscriptionCalendar } = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString('base64')}`);
 const now = new Date('2026-11-03T00:00:00Z');
 const shoot = {
   id: '24409564-a4d4-450d-a2cb-0fd0d48fa331', title: 'Обзор виллы', date: '2026-11-06', time: '23:30', duration: 90,
@@ -79,4 +79,29 @@ const preparationCalendar = eventCalendar({ ...shoot, preparation: longPreparati
 for (const line of preparationCalendar.split('\r\n')) assert(Buffer.byteLength(line, 'utf8') <= 75);
 assert(!preparationCalendar.includes('\uFFFD'));
 assert(unfold(preparationCalendar).includes('Подготовка актёров: ' + longPreparation));
-console.log('PASS: event times, 24-hour alarm, multiple/legacy values, escaping, UTF-8 folding, stable UID, updates, cancellation, past events, invalid dates, independent preparation and notes');
+const subscription = eventSubscriptionCalendar({ ...shoot, preparation: 'Взять светлую одежду' }, url, now);
+const subscriptionContent = unfold(subscription);
+assert(subscriptionContent.includes('X-WR-CALNAME:Gost Home · ' + shoot.title));
+assert(subscriptionContent.includes('REFRESH-INTERVAL;VALUE=DURATION:PT1H'));
+assert(subscriptionContent.includes('TRIGGER:-P1D'));
+assert(subscriptionContent.includes('Подготовка актёров: Взять светлую одежду'));
+assert(!subscriptionContent.includes('METHOD:') && !subscriptionContent.includes('ATTENDEE:') && !subscriptionContent.includes('ORGANIZER:'));
+const movedSubscription = unfold(eventSubscriptionCalendar({ ...shoot, title: 'Новое название', date: '2026-11-08', time: '10:00', revision: 4 }, url, now));
+assert.equal(movedSubscription.match(/^UID:(.*)\r?$/m)[1], subscriptionContent.match(/^UID:(.*)\r?$/m)[1]);
+assert(movedSubscription.includes('SEQUENCE:4') && movedSubscription.includes('DTSTART:20261108T030000Z'));
+const cancelledSubscription = unfold(eventSubscriptionCalendar({ ...shoot, status: 'Отменено' }, url, now));
+assert(cancelledSubscription.includes('STATUS:CANCELLED'));
+assert(!cancelledSubscription.includes('BEGIN:VALARM'));
+assert(!eventSubscriptionCalendar(shoot, url, new Date('2026-11-07T00:00:00Z')).includes('BEGIN:VALARM'));
+assert(!eventSubscriptionCalendar({ ...shoot, status: 'Снято' }, url, now).includes('BEGIN:VALARM'));
+const emptySubscription = eventSubscriptionCalendar(null, url, now);
+assert(emptySubscription.startsWith('BEGIN:VCALENDAR\r\nVERSION:2.0\r\n'));
+assert(emptySubscription.endsWith('END:VCALENDAR\r\n'));
+assert(!emptySubscription.includes('BEGIN:VEVENT'));
+const maliciousSubscription = eventSubscriptionCalendar({ ...shoot, title: 'Текст\r\nATTENDEE:mallory@example.com' }, url, now);
+assert.equal((unfold(maliciousSubscription).match(/^BEGIN:VEVENT\r?$/gm) || []).length, 1);
+assert(!unfold(maliciousSubscription).includes('\r\nATTENDEE:'));
+const longSubscription = eventSubscriptionCalendar({ ...shoot, title: longTitle }, url, now);
+for (const line of longSubscription.split('\r\n')) assert(Buffer.byteLength(line, 'utf8') <= 75);
+assert(!longSubscription.includes('\uFFFD'));
+console.log('PASS: one-time import, subscription feed, 24-hour alarm, values, escaping, UTF-8 folding, stable UID, moves, cancellation, past/completed events, deletion, independent preparation and notes');
