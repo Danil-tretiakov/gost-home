@@ -1,11 +1,12 @@
 import { SHOOT_STATUSES, normalizeShootStatus } from '../../../lib/shoot-status';
+import { SHOOT_TEAM } from '../../../lib/shoot-team';
 import { normalizeShootValues, storeShootValues } from '../../../lib/shoot-values';
 import { canEditCalendar } from '../../permissions';
 import { getDb } from '../../../db';
 import { shoots } from '../../../db/schema';
 import { and, eq } from 'drizzle-orm';
 export const dynamic='force-dynamic';
-const people=['Марк','Андрей','Александр','Юля','Лиза'];
+const people=SHOOT_TEAM.map(member=>member[0]);
 function valid(x:any){return x && typeof x.title==='string' && x.title.trim().length>0 && x.title.length<=200 && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && !isNaN(Date.parse(x.date)) && /^([01]\d|2[0-3]):[0-5]\d$/.test(x.time) && Number.isInteger(x.duration)&&x.duration>0&&x.duration<=720 && ['Reels','YouTube'].includes(x.format) && SHOOT_STATUSES.includes(x.status) && Array.isArray(x.participants)&&x.participants.length>0&&x.participants.every((p:string)=>people.includes(p)) && ['project','location','notes'].every(k=>typeof x[k]==='string'&&x[k].length<=5000) && (x.preparation===undefined || (typeof x.preparation==='string'&&x.preparation.length<=5000));}
 function safe(req:Request){return !req.headers.get('origin') || req.headers.get('origin')===new URL(req.url).origin;}
 export async function GET(){try{return Response.json((await getDb().select().from(shoots)).map(row=>({...row,status:normalizeShootStatus(row.status)})),{headers:{'Cache-Control':'no-store'}});}catch{return Response.json({error:'Не удалось загрузить календарь'},{status:503});}}
