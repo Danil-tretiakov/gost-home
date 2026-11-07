@@ -97,6 +97,7 @@ function formatCalendar(shoot: CalendarShoot | null, eventUrl: string, now: Date
     `Статус: ${shoot.status}`,
     shoot.participants.length ? `Участники: ${shoot.participants.join(', ')}` : '',
     projects.length ? `Проекты: ${projects.join(', ')}` : '',
+    locations.length ? `Локации: ${locations.join('; ')}` : '',
     shoot.preparation?.trim() ? `Подготовка актёров: ${shoot.preparation}` : '',
     shoot.notes.trim() ? `Заметки: ${shoot.notes}` : '',
     'Время съёмки указано по Бангкоку (UTC+7).',
@@ -112,8 +113,6 @@ function formatCalendar(shoot: CalendarShoot | null, eventUrl: string, now: Date
     `DTEND:${utc(end)}`,
     `SUMMARY:${text(`Gost Home · ${shoot.title}`)}`,
     `DESCRIPTION:${text(description)}`,
-    ...(locations.length ? [`LOCATION:${text(locations.join('; '))}`] : []),
-    `URL:${url.href}`,
     `STATUS:${cancelled ? 'CANCELLED' : 'CONFIRMED'}`,
     `TRANSP:${cancelled ? 'TRANSPARENT' : 'OPAQUE'}`,
     ...(!cancelled && (!subscription || shoot.status !== 'Снято') && start.getTime() > now.getTime() ? [
