@@ -1,5 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { authMode, sessionSecret } from "../lib/auth-mode";
+import { readCookie, SESSION_COOKIE, strongSecret, verifySession } from "../lib/session";
 
 export type ChatGPTUser = {
   userId: string;
@@ -20,6 +22,13 @@ const CALLBACK_PATH = "/callback";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
+  if (authMode() === "password") {
+    // Outside Sites the oai-* headers could come from the browser itself: never read them here.
+    const secret = sessionSecret();
+    if (!strongSecret(secret)) return null;
+    const email = await verifySession(secret, readCookie(requestHeaders.get("cookie"), SESSION_COOKIE));
+    return email ? { userId: "session:" + email, displayName: email, email, fullName: null } : null;
+  }
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) return null;
@@ -49,6 +58,7 @@ export async function requireChatGPTUser(
 }
 
 export function chatGPTSignInPath(returnTo: string): string {
+  if (authMode() === "password") return "/login";
   const safeReturnTo = safeRelativeReturnPath(returnTo);
   return `${SIGN_IN_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }

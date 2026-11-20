@@ -11,3 +11,9 @@ export function getDb() {
 
   return drizzle(env.DB, { schema });
 }
+
+/** Raw D1 binding for multi-statement transactional batches (see lib/content-writes.ts). */
+export function getD1() {
+  if (!env.DB) throw new Error("Cloudflare D1 binding `DB` is unavailable.");
+  return env.DB;
+}

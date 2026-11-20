@@ -31,9 +31,9 @@ export default function ShareEvent({ id, title }: { id: string; title: string })
     } finally { setSharing(false); }
   }
   return <div className="share-event">
-    <button type="button" className="share-open" onClick={showLink} aria-expanded={show}>↗ Поделиться событием</button>
+    <button type="button" className="share-open" onClick={showLink} aria-expanded={show}>↗ Отправить ссылку участникам</button>
     {show && <div className="share-panel">
-      <p>По ссылке откроются детали съёмки и кнопка добавления события в календарь.</p>
+      <p>По ссылке участник увидит дату, время, проекты, локации, подготовку и заметки и одной кнопкой добавит съёмку в свой календарь с напоминанием за сутки.</p>
       <label>Ссылка на событие<input readOnly value={url} onFocus={e => e.currentTarget.select()} /></label>
       <div className="share-actions"><button type="button" onClick={copyLink}>Копировать ссылку</button><button type="button" disabled={sharing} onClick={shareLink}>Отправить…</button><a href={`/events/${encodeURIComponent(id)}`} target="_blank" rel="noopener noreferrer">Открыть</a></div>
       <p role="status" aria-live="polite">{message}</p>

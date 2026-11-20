@@ -91,7 +91,7 @@ function formatCalendar(shoot: CalendarShoot | null, eventUrl: string, now: Date
 
   const projects = normalizeShootValues(shoot.project);
   const locations = normalizeShootValues(shoot.location);
-  const cancelled = shoot.status === 'Отменено';
+  const cancelled = shoot.status === 'Отменено' || shoot.status === 'Перенесено'; // postponed: the old date is not happening
   const description = [
     `Формат: ${shoot.format}`,
     `Статус: ${shoot.status}`,

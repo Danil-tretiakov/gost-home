@@ -111,3 +111,7 @@ const longSubscription = eventSubscriptionCalendar({ ...shoot, title: longTitle 
 for (const line of longSubscription.split('\r\n')) assert(Buffer.byteLength(line, 'utf8') <= 75);
 assert(!longSubscription.includes('\uFFFD'));
 console.log('PASS: one-time import, subscription feed, 24-hour alarm, location names and invitation link retained in description without geo fields, escaping, UTF-8 folding, stable UID, moves, cancellation, past/completed events, deletion, independent preparation and notes');
+// v28: a postponed shoot (new date not chosen) is not happening on its old date.
+const postponed = eventCalendar({ ...shoot, status: 'Перенесено' }, url, now);
+assert(postponed.includes('STATUS:CANCELLED') && !postponed.includes('BEGIN:VALARM'), 'postponed shoot is marked cancelled in calendars');
+console.log('postponed shoot ok');
