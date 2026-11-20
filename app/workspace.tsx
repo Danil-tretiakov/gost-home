@@ -11,7 +11,6 @@ import { getUpcomingShoots, upcomingDayLabel } from '../lib/upcoming-shoots';
 import { newTaskDraft, TaskBoard, TaskDrawer, TaskRow, type TaskDraft } from './tasks';
 import { urgentTasks, type Task, type TaskFolder } from '../lib/tasks';
 import { AiStudio, AutoplanPanel, BackupPanel, IntegrationsPanel } from './workspace-panels';
-import { ReelPayWidget } from './reel-pay';
 import { api, bangkokToday, dayLabel, monthLabel, newContentDraft, shiftMonth, type ClientAccess, type ContentDraft, type ContentItem, type Shoot } from './workspace-types';
 import { TeamPanel } from './team-panel';
 import { NotificationBell, type NoteItem } from './notifications';
@@ -261,7 +260,6 @@ function ContentPlan({ items, allItems, shoots, summary, month, setMonth, canEdi
           <ul className="split-legend">{planParts.map(p => <li key={p.member}><i className="dot" style={{ background: color(p.member) }} />{p.member} <b>{Math.round(p.n / planTotal * 100)}%</b> <small>{p.n}</small></li>)}</ul>
         </div>}
       </section>
-      {access.caps.finance && <ReelPayWidget items={allItems} canEdit={access.caps.finance && (access.caps.edit || access.caps.review)} />}
     </div>
 
     <div className="plan-bar">
