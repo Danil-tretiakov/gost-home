@@ -16,10 +16,12 @@ type Props = {
   onClose: () => void; onSaved: (item: ContentItem) => void; onOpenShoot?: (id: string) => void;
   /** Picks the nearest free publish day for a new item left without a date. */
   autoDate?: (d: ContentDraft) => string | null;
+  /** After a new item is created: start the next script for the same shoot and lead. */
+  onAddAnother?: (saved: ContentItem) => void;
 };
 
 /** One editor for a Reels/YouTube item, used from every section so all of them show the same record. */
-export default function ContentDrawer({ draft: initial, shoots, canEdit, canReview = canEdit, canReadInternal = canEdit, onClose, onSaved, onOpenShoot, autoDate }: Props) {
+export default function ContentDrawer({ draft: initial, shoots, canEdit, canReview = canEdit, canReadInternal = canEdit, onClose, onSaved, onOpenShoot, autoDate, onAddAnother }: Props) {
   const [draft, setDraft] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +33,7 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
   const [versionsTick, setVersionsTick] = useState(0);
   const isNew = draft.revision === undefined;
   // A new item opened without an explicit day (not from a calendar «+») gets its publish day automatically.
+  const [created, setCreated] = useState(false);
   const [autoPlace] = useState(initial.revision === undefined && !initial.plannedPublishDate);
 
   useEffect(() => {
@@ -57,7 +60,7 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
     try {
       const body = autoPlace && autoDate ? { ...draft, plannedPublishDate: autoDate(draft) } : draft;
       const saved = await api<ContentItem>('/api/content', { method: 'POST', json: body });
-      onSaved(saved); setDraft({ ...saved });
+      const wasNew = isNew; onSaved(saved); setDraft({ ...saved }); if (wasNew) setCreated(true);
     } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
   }
 
@@ -123,7 +126,7 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
         <fieldset disabled={!canEdit || busy} className="edit-fields">
           <div className={isNew ? 'fields' : 'fields two'}>
             <label>Тип<select value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value as ContentDraft['type'] })}><option value="reel">Reels</option><option value="youtube">YouTube</option></select></label>
-            {autoPlace ? <div className="auto-date"><span className="field-label">Дата публикации</span><span className="hint">подберётся автоматически</span></div> : <label>Дата публикации (план)<input type="date" value={draft.plannedPublishDate ?? ''} onChange={e => setDraft({ ...draft, plannedPublishDate: e.target.value || null })} /></label>}
+            {!autoPlace && <label>Дата публикации (план)<input type="date" value={draft.plannedPublishDate ?? ''} onChange={e => setDraft({ ...draft, plannedPublishDate: e.target.value || null })} /></label>}
             {isNew && <label>Этап<select value={draft.productionStatus} onChange={e => setDraft({ ...draft, productionStatus: e.target.value as ContentStatus })}>
               {CONTENT_STATUSES.filter(s => s !== 'published' && s !== 'paused' && s !== 'cancelled' && s !== 'changes_requested').map(s => <option key={s} value={s}>{CONTENT_STATUS_LABELS[s]}</option>)}
             </select></label>}
@@ -142,6 +145,7 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
           <label>Сценарий, описание, референсы<textarea rows={6} maxLength={10000} value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} /></label>
         </fieldset>
         {error && <p role="alert" className="error">{error}</p>}
+        {created && onAddAnother && <div className="added-banner"><span>✓ Ролик добавлен</span><button type="button" className="primary" onClick={() => onAddAnother(draft as ContentItem)}>＋ Ещё сценарий</button></div>}
         {canEdit && <div className="form-actions"><button type="button" disabled={busy} onClick={onClose}>Закрыть</button><button className="primary" disabled={busy}>{busy ? 'Сохраняем…' : isNew ? 'Создать ролик' : 'Сохранить'}</button></div>}
       </form>
 

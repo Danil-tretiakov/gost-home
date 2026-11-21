@@ -137,7 +137,7 @@ export default function Workspace({ access }: { access: ClientAccess }) {
           <Settings key={planRevision} plan={plan} revision={planRevision} canEdit={canEdit} access={access} onReload={load} onSaved={(p, r) => { setPlan(p); setPlanRevision(r); }} />}
       </main>}
 
-    {drawer && <ContentDrawer key={drawer.id} draft={drawer} shoots={shoots} canEdit={canEdit} canReview={caps.review} canReadInternal={internal} autoDate={d => nextFreeDay(items, d.primaryMember, today)} onClose={() => setDrawer(null)} onSaved={item => { upsert(item); }}
+    {drawer && <ContentDrawer key={drawer.id} draft={drawer} shoots={shoots} canEdit={canEdit} canReview={caps.review} canReadInternal={internal} autoDate={d => nextFreeDay(items, d.primaryMember, today)} onAddAnother={s => setDrawer(newContentDraft({ shootId: s.shootId, primaryMember: s.primaryMember, participants: s.participants, type: s.type, places: s.places }))} onClose={() => setDrawer(null)} onSaved={item => { upsert(item); }}
       onOpenShoot={id => { setDrawer(null); setOpenShootId(id); go('shoots'); }} />}
     {taskDraft && <TaskDrawer key={taskDraft.id + (taskDraft.revision ?? 'new')} draft={taskDraft} folders={taskFolders} shoots={shoots} items={items} readOnly={!canEdit} onClose={() => setTaskDraft(null)} onSaved={upsertTask}
       onOpenShoot={id => { setTaskDraft(null); setDrawer(null); setOpenShootId(id); go('shoots'); }} onOpenContent={item => { setTaskDraft(null); open(item); }} />}
