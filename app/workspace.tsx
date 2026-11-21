@@ -325,6 +325,7 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets }: 
     byDateMember.set(d, new Map([[pick, { title: 'нужно подготовить ролик', ready: false, planned: true }]]));
   }
   const rows = SHOOT_TEAM.filter(([name]) => members.includes(name));
+  const perDay = Math.max(1, ...[...byDateMember.values()].map(m => m.size));
   const cells = monthCalendarCells(month);
   const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
   return <section className="mini-cal">
@@ -338,8 +339,8 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets }: 
         const forDate = date ? byDateMember.get(date) : undefined;
         return <div key={idx} className={'mini-cal-cell' + (date ? '' : ' empty') + (date === today ? ' today' : '')}>
           {date && <><span className="mini-cal-day">{Number(date.slice(8))}</span>
-            {rows.map(([name]) => { const e = forDate?.get(name); return <div key={name} className="mc-row">
-              {e && <span className={'mc-item' + (e.planned ? ' planned' : '')} style={{ '--c': color(name) } as React.CSSProperties} title={`${name}: ${e.title}`}>
+            {Array.from({ length: perDay }, (_, k) => { const name = rows.map(r => r[0]).filter(n => forDate?.has(n))[k]; const e = name ? forDate?.get(name) : undefined; return <div key={k} className="mc-row">
+              {e && name && <span className={'mc-item' + (e.planned ? ' planned' : '')} style={{ '--c': color(name) } as React.CSSProperties} title={`${name}: ${e.title}`}>
                 <i className={'rdot ' + (e.ready ? 'ready' : 'pending')} />{name}</span>}
             </div>; })}</>}
         </div>;
