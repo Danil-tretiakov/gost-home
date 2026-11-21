@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { BadgeCheck, Clapperboard, FileText, House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Wand2, type LucideIcon } from 'lucide-react';
+import { Clapperboard, FileText, House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Wand2, type LucideIcon } from 'lucide-react';
 import Calendar from './calendar';
 import ContentDrawer from './content-drawer';
 import { SHOOT_TEAM } from '../lib/shoot-team';
@@ -18,7 +18,7 @@ import { NotificationBell, type NoteItem } from './notifications';
 type Section = 'home' | 'tasks' | 'shoots' | 'content' | 'approval' | 'ai' | 'settings';
 const NAV: [Section, LucideIcon, string][] = [
   ['home', House, 'Главная'], ['tasks', ListChecks, 'Задачник'], ['shoots', Clapperboard, 'Календарь съёмок'], ['content', FileText, 'Контент-план'],
-  ['approval', BadgeCheck, 'Согласование'], ['settings', SettingsIcon, 'Настройки'],
+  ['settings', SettingsIcon, 'Настройки'],
 ];
 const color = (name: string) => SHOOT_TEAM.find(t => t[0] === name)?.[2] ?? '#889';
 
@@ -169,8 +169,8 @@ function Home({ summary, items, shoots, today, month, onOpen, onOpenShoot, onGo,
     <div className="kpis">
       <Kpi label={`Reels · ${monthLabel(month)}`} value={summary.reels.published} of={summary.reels.target} note={`запланировано ${summary.reels.scheduled}`} />
       <Kpi label="YouTube" value={summary.youtube.published} of={summary.youtube.target} note={`запланировано ${summary.youtube.scheduled}`} />
-      <Kpi label="В производстве" value={summary.inProduction} note={`${summary.awaitingFeedback} ждёт согласования · ${summary.changesRequested} на правках`} onClick={() => onGo('approval')} />
-      <Kpi label="Готовый запас" value={summary.readyStock} note={summary.coverage.upcomingSlots ? `обеспечено слотов подряд: ${summary.coverage.coveredSlots} из ${summary.coverage.upcomingSlots}` : 'будущих слотов нет'} onClick={() => onGo('approval')} />
+      <Kpi label="В производстве" value={summary.inProduction} note={`${summary.awaitingFeedback} ждёт согласования · ${summary.changesRequested} на правках`} onClick={() => onGo('content')} />
+      <Kpi label="Готовый запас" value={summary.readyStock} note={summary.coverage.upcomingSlots ? `обеспечено слотов подряд: ${summary.coverage.coveredSlots} из ${summary.coverage.upcomingSlots}` : 'будущих слотов нет'} onClick={() => onGo('content')} />
     </div>
     {taskList && <section className="panel home-tasks"><div className="panel-head"><h2>Срочные задачи</h2><button className="link-button" onClick={() => onGo('tasks')}>Задачник →</button></div>
       {urgent.length ? <ul className="task-list compact">{urgent.map(t => <TaskRow key={t.id} t={t} links={{ shoot: shoots.find(s => s.id === t.shootId)?.title, content: items.find(i => i.id === t.contentId)?.title }} onOpen={() => onOpenTask({ ...t })} />)}</ul>
