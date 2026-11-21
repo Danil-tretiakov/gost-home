@@ -124,7 +124,7 @@ export default function Workspace({ access }: { access: ClientAccess }) {
         {loading ? <div className="skeleton" aria-busy="true">Загружаем…</div> :
           section === 'home' ? <Home summary={summary} items={items} shoots={shoots} today={today} month={month} onOpen={open} onOpenShoot={id => { setOpenShootId(id); go('shoots'); }} onGo={go} taskList={internal ? tasks : null} onOpenTask={openTask} /> :
           section === 'tasks' ? (internal ? <TaskBoard tasks={tasks} folders={taskFolders} shoots={shoots} items={items} onOpen={openTask} onSaved={upsertTask} onFolderSaved={upsertFolder} readOnly={!canEdit} /> : <div className="panel placeholder"><h2>Только для команды</h2></div>) :
-          section === 'content' ? <ContentPlan items={visible} allItems={items} shoots={shoots} summary={summary} month={month} setMonth={setMonth} canEdit={canEdit} access={access} onOpen={open} onReschedule={reschedule} onQuick={quickStatus} onAdd={date => setDrawer(newContentDraft({ plannedPublishDate: date }))} onReload={load} /> :
+          section === 'content' ? <ContentPlan yuliaInterval={plan.yuliaIntervalDays} items={visible} allItems={items} shoots={shoots} summary={summary} month={month} setMonth={setMonth} canEdit={canEdit} access={access} onOpen={open} onReschedule={reschedule} onQuick={quickStatus} onAdd={date => setDrawer(newContentDraft({ plannedPublishDate: date }))} onReload={load} /> :
           section === 'approval' ? <Approval items={visible} shoots={shoots} canEdit={canEdit} summary={summary} month={month} onOpen={open} onReschedule={reschedule} onQuick={quickStatus} /> :
           section === 'ai' ? <AiStudio items={items} canEdit={canEdit} canRead={internal} /> :
           <Settings key={planRevision} plan={plan} revision={planRevision} canEdit={canEdit} access={access} onReload={load} onSaved={(p, r) => { setPlan(p); setPlanRevision(r); }} />}
@@ -235,7 +235,7 @@ function planTable(list: PlanRow[], ctx: RowCtx, sortCtx?: { sort: { key: SortKe
 const STAGE_SORT_ORDER: Record<string, number> = { planned: 0, shot: 1, editing: 1, awaiting_feedback: 2, approved: 3 };
 
 /** Контент-план: members card, a month calendar, and one flat sortable list of everything still in the pipeline — no month switcher, Данил found it confusing to keep searching across months. */
-function ContentPlan({ items, allItems, shoots, summary, month, canEdit, access, onOpen, onReschedule, onQuick, onAdd, onReload }: { items: ContentItem[]; allItems: ContentItem[]; shoots: Shoot[]; summary: Summary; month: string; setMonth: (m: string) => void; canEdit: boolean; access: ClientAccess; onOpen: (i: ContentItem) => void; onReschedule: (i: ContentItem, d: string | null) => void; onQuick: (i: ContentItem, to: ContentStatus) => void; onAdd: (d: string | null) => void; onReload: () => void }) {
+function ContentPlan({ items, allItems, shoots, summary, month, yuliaInterval, canEdit, access, onOpen, onReschedule, onQuick, onAdd, onReload }: { yuliaInterval: number; items: ContentItem[]; allItems: ContentItem[]; shoots: Shoot[]; summary: Summary; month: string; setMonth: (m: string) => void; canEdit: boolean; access: ClientAccess; onOpen: (i: ContentItem) => void; onReschedule: (i: ContentItem, d: string | null) => void; onQuick: (i: ContentItem, to: ContentStatus) => void; onAdd: (d: string | null) => void; onReload: () => void }) {
   const [autoplanOpen, setAutoplanOpen] = useState(false);
   const [type, setType] = useState<'all' | 'reel' | 'youtube'>('all');
   const [who, setWho] = useState('');
@@ -269,7 +269,7 @@ function ContentPlan({ items, allItems, shoots, summary, month, canEdit, access,
           <ul className="split-legend">{planParts.map(p => <li key={p.member}><i className="dot" style={{ background: color(p.member) }} />{p.member} <b>{Math.round(p.n / planTotal * 100)}%</b> <small>{p.n}</small></li>)}</ul>
         </div>}
       </section>
-      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} targets={Object.fromEntries(summary.members.map(m => [m.member, m.target]))} />
+      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} targets={Object.fromEntries(summary.members.map(m => [m.member, m.target]))} yuliaInterval={yuliaInterval} />
     </div>
 
     <div className="plan-bar">
@@ -297,7 +297,7 @@ function monthCalendarCells(month: string): (string | null)[] {
 type CalEntry = { title: string; ready: boolean; planned?: boolean };
 
 /** Month calendar: one fixed row per active member (same order every day, from SHOOT_TEAM). Real dated items are solid; empty future days get one dashed planned placeholder. */
-function MiniCalendar({ month: startMonth, allItems, today, members, targets }: { month: string; allItems: ContentItem[]; today: string; members: string[]; targets: Record<string, number> }) {
+function MiniCalendar({ month: startMonth, allItems, today, members, targets, yuliaInterval }: { month: string; allItems: ContentItem[]; today: string; members: string[]; targets: Record<string, number>; yuliaInterval: number }) {
   const [month, setMonth] = useState(startMonth);
   const dateOf = (i: ContentItem) => i.productionStatus === 'published' && i.publishedAt ? i.publishedAt : i.plannedPublishDate;
   const byDateMember = new Map<string, Map<string, CalEntry>>();
@@ -316,10 +316,15 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets }: 
   const left = Object.fromEntries(Object.entries(targets).map(([m, t]) => [m, Math.max(0, t - (realCount[m] ?? 0))]));
   const planned: Record<string, number> = {};
   const days = monthCalendarCells(month).filter((d): d is string => !!d);
+  // Юля goes on a fixed rhythm (every `yuliaInterval` days) counted from her earliest dated reel; everyone else fills the remaining days.
+  const dayNum = (x: string) => Math.round(Date.parse(x + 'T00:00:00Z') / 864e5);
+  const yuliaDates = allItems.filter(i => i.primaryMember === 'Юля' && i.productionStatus !== 'cancelled' && i.plannedPublishDate).map(i => i.plannedPublishDate as string).sort();
+  const isYuliaDay = (d: string) => yuliaDates.length > 0 && 'Юля' in targets && (dayNum(d) - dayNum(yuliaDates[0])) % Math.max(1, yuliaInterval) === 0;
   for (const d of days) {
     if (d < today || byDateMember.has(d)) continue;
+    if (isYuliaDay(d)) { byDateMember.set(d, new Map([['Юля', { title: 'нужно подготовить ролик', ready: false, planned: true }]])); continue; }
     const near = [-1, 1].flatMap(k => { const n = days[days.indexOf(d) + k]; return n ? [...(byDateMember.get(n)?.keys() ?? [])] : []; });
-    const pick = Object.keys(left).filter(m => left[m] > 0 && !near.includes(m)).sort((x, y) => left[y] / ((planned[y] ?? 0) + 1) - left[x] / ((planned[x] ?? 0) + 1))[0];
+    const pick = Object.keys(left).filter(m => m !== 'Юля' && left[m] > 0 && !near.includes(m)).sort((x, y) => left[y] / ((planned[y] ?? 0) + 1) - left[x] / ((planned[x] ?? 0) + 1))[0];
     if (!pick) continue;
     left[pick]--; planned[pick] = (planned[pick] ?? 0) + 1;
     byDateMember.set(d, new Map([[pick, { title: 'нужно подготовить ролик', ready: false, planned: true }]]));
