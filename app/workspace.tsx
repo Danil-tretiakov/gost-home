@@ -343,7 +343,9 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets, yu
     });
     const byScore = (a: { score: number }, b: { score: number }) => b.score - a.score;
     // сначала строго по интервалу; если никто не подходит, закрываем день тем, кто дальше всех от своих роликов (не вплотную)
-    const pick = (cand.filter(c => c.ok).sort(byScore)[0] ?? cand.filter(c => c.dist >= 2).sort((a, b) => b.dist - a.dist || b.interval - a.interval)[0])?.m;
+    const picked = (cand.filter(c => c.ok).sort(byScore)[0] ?? cand.filter(c => c.dist >= 2).sort((a, b) => b.dist - a.dist || b.interval - a.interval)[0])?.m;
+    // Ролик должен выходить каждый день: если квоты закончились, день закрывает Марк (он «добирает остаток»)
+    const pick = picked ?? ('Марк' in targets ? 'Марк' : undefined);
     if (!pick) continue;
     planned[pick] = (planned[pick] ?? 0) + 1;
     (anchors[pick] ??= []).push(dn);
