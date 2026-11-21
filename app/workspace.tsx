@@ -316,10 +316,12 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets, yu
   const left = Object.fromEntries(Object.entries(targets).map(([m, t]) => [m, Math.max(0, t - (realCount[m] ?? 0))]));
   const planned: Record<string, number> = {};
   const days = monthCalendarCells(month).filter((d): d is string => !!d);
-  // Юля goes on a fixed rhythm (every `yuliaInterval` days) counted from her earliest dated reel; everyone else fills the remaining days.
+  // Юля goes on a fixed rhythm: every `yuliaInterval` days, with a gap one day shorter every 4th time (the extra different-format reels, about twice a month), counted from her earliest dated reel; everyone else fills the remaining days.
   const dayNum = (x: string) => Math.round(Date.parse(x + 'T00:00:00Z') / 864e5);
   const yuliaDates = allItems.filter(i => i.primaryMember === 'Юля' && i.productionStatus !== 'cancelled' && i.plannedPublishDate).map(i => i.plannedPublishDate as string).sort();
-  const isYuliaDay = (d: string) => yuliaDates.length > 0 && 'Юля' in targets && (dayNum(d) - dayNum(yuliaDates[0])) % Math.max(1, yuliaInterval) === 0;
+  const yuliaDays = new Set<number>();
+  if (yuliaDates.length && 'Юля' in targets) { let n = dayNum(yuliaDates[0]); for (let k = 0; n < dayNum(yuliaDates[0]) + 400; k++) { yuliaDays.add(n); n += Math.max(1, yuliaInterval - (k % 4 === 2 ? 1 : 0)); } }
+  const isYuliaDay = (d: string) => yuliaDays.has(dayNum(d));
   for (const d of days) {
     if (d < today || byDateMember.has(d)) continue;
     if (isYuliaDay(d)) { byDateMember.set(d, new Map([['Юля', { title: 'нужно подготовить ролик', ready: false, planned: true }]])); continue; }
