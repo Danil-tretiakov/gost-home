@@ -269,7 +269,7 @@ function ContentPlan({ items, allItems, shoots, summary, month, canEdit, access,
           <ul className="split-legend">{planParts.map(p => <li key={p.member}><i className="dot" style={{ background: color(p.member) }} />{p.member} <b>{Math.round(p.n / planTotal * 100)}%</b> <small>{p.n}</small></li>)}</ul>
         </div>}
       </section>
-      <MiniCalendar month={month} allItems={allItems} today={today} />
+      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} />
     </div>
 
     <div className="plan-bar">
@@ -294,39 +294,22 @@ function monthCalendarCells(month: string): (string | null)[] {
   return cells;
 }
 
-type AutoSlot = { date: string; member: string; kind: 'assign' | 'new' | 'empty'; itemId: string | null; title: string };
-type CalEntry = { member: string; title: string; ready: boolean };
+type CalEntry = { title: string; ready: boolean };
 
-/** Loads the live Автоплан projection for a month: proposed/placeholder slots for days nothing is dated yet. Never writes anything. */
-function useAutoplanSlots(month: string): AutoSlot[] {
-  const [slots, setSlots] = useState<AutoSlot[]>([]);
-  useEffect(() => {
-    let live = true;
-    api<{ slots: AutoSlot[] }>(`/api/content/autoplan?month=${month}&fillEmpty=1`).then(r => { if (live) setSlots(r.slots); }).catch(() => { if (live) setSlots([]); });
-    return () => { live = false; };
-  }, [month]);
-  return slots;
-}
-
-function MiniCalendar({ month, allItems, today }: { month: string; allItems: ContentItem[]; today: string }) {
-  const auto = useAutoplanSlots(month);
+/** Month calendar: one fixed row per active member (same order every day, from SHOOT_TEAM), filled only from real dated items — nothing projected or guessed. A row stays blank if that member has nothing dated that day. */
+function MiniCalendar({ month, allItems, today, members }: { month: string; allItems: ContentItem[]; today: string; members: string[] }) {
   const dateOf = (i: ContentItem) => i.productionStatus === 'published' && i.publishedAt ? i.publishedAt : i.plannedPublishDate;
-  const byDate = new Map<string, CalEntry[]>();
+  const byDateMember = new Map<string, Map<string, CalEntry>>();
   for (const i of allItems) {
     if (i.productionStatus === 'cancelled') continue;
     const d = dateOf(i);
     if (!d || !d.startsWith(month)) continue;
     const ready = i.productionStatus === 'approved' || i.productionStatus === 'published';
-    byDate.set(d, [...(byDate.get(d) ?? []), { member: i.primaryMember, title: i.title, ready }]);
+    const forDate = byDateMember.get(d) ?? new Map<string, CalEntry>();
+    forDate.set(i.primaryMember, { title: i.title, ready });
+    byDateMember.set(d, forDate);
   }
-  // Fill in placeholders from the live Автоплан for days nothing is dated yet — Данил wants to see who's due even before anything is shot.
-  for (const s of auto) {
-    if (!s.date.startsWith(month)) continue;
-    const already = byDate.get(s.date) ?? [];
-    if (already.some(e => e.member === s.member)) continue;
-    const title = s.kind === 'assign' ? `${s.title} (дата не закреплена)` : 'ещё не снято';
-    byDate.set(s.date, [...already, { member: s.member, title, ready: false }]);
-  }
+  const rows = SHOOT_TEAM.filter(([name]) => members.includes(name));
   const cells = monthCalendarCells(month);
   const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
   return <aside className="mini-cal">
@@ -334,14 +317,20 @@ function MiniCalendar({ month, allItems, today }: { month: string; allItems: Con
     <div className="mini-cal-grid">
       {weekdays.map(w => <span key={w} className="mini-cal-wd">{w}</span>)}
       {cells.map((date, idx) => {
-        const list = date ? byDate.get(date) ?? [] : [];
+        const forDate = date ? byDateMember.get(date) : undefined;
         return <div key={idx} className={'mini-cal-cell' + (date ? '' : ' empty') + (date === today ? ' today' : '')}>
           {date && <><span className="mini-cal-day">{Number(date.slice(8))}</span>
-            <div className="mini-cal-items">{list.map((e, i) => <span key={i} className={'mc-item ' + (e.ready ? 'ready' : 'pending')} style={{ '--c': color(e.member) } as React.CSSProperties} title={`${e.member}: ${e.title}`}>{e.member}</span>)}</div></>}
+            {rows.map(([name]) => { const e = forDate?.get(name); return <div key={name} className="mc-row">
+              {e && <span className="mc-item" style={{ '--c': color(name) } as React.CSSProperties} title={`${name}: ${e.title}`}>
+                <i className={'rdot ' + (e.ready ? 'ready' : 'pending')} />{name}</span>}
+            </div>; })}</>}
         </div>;
       })}
     </div>
-    <ul className="mini-cal-legend">{SHOOT_TEAM.map(([name]) => <li key={name}><i className="dot" style={{ background: color(name) }} />{name}</li>)}</ul>
+    <ul className="mini-cal-legend">
+      <li><i className="rdot ready" /> готово к выкладке</li><li><i className="rdot pending" /> ещё не готово</li>
+    </ul>
+    <ul className="mini-cal-legend">{rows.map(([name]) => <li key={name}><i className="dot" style={{ background: color(name) }} />{name}</li>)}</ul>
   </aside>;
 }
 
