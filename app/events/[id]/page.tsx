@@ -4,6 +4,10 @@ import { getShootById } from '../../../lib/get-shoot';
 import { eventTimes } from '../../../lib/event-calendar';
 import { normalizeShootValues } from '../../../lib/shoot-values';
 import AddToCalendar from '../../add-to-calendar';
+import ScriptCard from '../../script-card';
+import { and, asc, eq, ne } from 'drizzle-orm';
+import { getDb } from '../../../db';
+import { contentItems } from '../../../db/schema';
 export const dynamic = 'force-dynamic';
 type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -25,6 +29,13 @@ export default async function EventPage({ params }: Props) {
   const date = new Intl.DateTimeFormat('ru', { timeZone: 'Asia/Bangkok', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const time = new Intl.DateTimeFormat('ru', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
   const sameDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(start) === new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(end);
+  // Scripts of the reels shot at this event, for actors to read, copy or download (the share link is the access).
+  let scripts: { id: string; title: string; text: string }[] = [];
+  try {
+    const rows = await getDb().select({ id: contentItems.id, title: contentItems.title, description: contentItems.description }).from(contentItems)
+      .where(and(eq(contentItems.shootId, shoot.id), ne(contentItems.productionStatus, 'cancelled'))).orderBy(asc(contentItems.createdAt));
+    scripts = rows.map(r => ({ id: r.id, title: r.title, text: r.description.replace(/\*\*/g, '').trim() })).filter(r => r.text);
+  } catch { /* the invitation still works without scripts */ }
   const projects = normalizeShootValues(shoot.project);
   const locations = normalizeShootValues(shoot.location);
   return <main className="invitation">
@@ -37,7 +48,7 @@ export default async function EventPage({ params }: Props) {
       <p className="invite-time">{time.format(start)} — {sameDay ? time.format(end) : `${date.format(end)}, ${time.format(end)}`}</p>
       <p className="invite-zone">Время Бангкока · UTC+7</p>
       <dl className="invite-details"><div><dt>Формат</dt><dd>{shoot.format}</dd></div><div><dt>Участники</dt><dd>{shoot.participants.join(' · ')}</dd></div>{projects.length > 0 && <div><dt>Проекты</dt><dd>{projects.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}{locations.length > 0 && <div><dt>Локации</dt><dd>{locations.map(value => <span className="invite-tag" key={value}>{value}</span>)}</dd></div>}</dl>
-      <section className="invite-notes invite-preparation" aria-labelledby="preparation-title"><h2 id="preparation-title">Подготовка актёров</h2>{shoot.preparation.trim() ? <p>{shoot.preparation}</p> : <p className="invite-notes-empty">Особая подготовка не указана.</p>}</section><section className="invite-notes" aria-labelledby="notes-title"><h2 id="notes-title">Заметки</h2>{shoot.notes.trim() ? <p>{shoot.notes}</p> : <p className="invite-notes-empty">Заметок пока нет.</p>}</section>
+      <section className="invite-notes invite-preparation" aria-labelledby="preparation-title"><h2 id="preparation-title">Подготовка актёров</h2>{shoot.preparation.trim() ? <p>{shoot.preparation}</p> : <p className="invite-notes-empty">Особая подготовка не указана.</p>}</section>{scripts.length > 0 && <section className="invite-notes invite-scripts" aria-labelledby="scripts-title"><h2 id="scripts-title">Сценарии</h2>{scripts.map((sc, i) => <ScriptCard key={sc.id} n={i + 1} title={sc.title} text={sc.text} />)}</section>}<section className="invite-notes" aria-labelledby="notes-title"><h2 id="notes-title">Заметки</h2>{shoot.notes.trim() ? <p>{shoot.notes}</p> : <p className="invite-notes-empty">Заметок пока нет.</p>}</section>
       <p className="invite-footnote">Здесь показано актуальное расписание. Добавленное вручную событие не обновляется автоматически — при переносе съёмки проверьте дату по этой ссылке.</p>
     </article>
   </main>;

@@ -45,3 +45,14 @@
 .auto-date .hint{font-size:14px;padding:9px 0;color:#4cc38a}
 
 .added-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 4px;padding:10px 14px;border:1px solid rgba(76,195,138,.5);background:color-mix(in srgb,#4cc38a 8%,var(--card));border-radius:10px;color:#4cc38a;font-weight:500}
+
+/* Сценарии на странице приглашения */
+.invite-scripts .script-card{border:1px solid #2f2f2e;background:#171615;border-radius:10px;margin:0 0 10px;overflow:hidden}
+.script-card summary{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;list-style:none;font-size:14px}
+.script-card summary::-webkit-details-marker{display:none}
+.script-card .script-n{font-weight:600;color:#4cc38a;white-space:nowrap}
+.script-card .script-title{color:#d6d5d3;overflow:hidden;text-overflow:ellipsis}
+.script-card .script-body{padding:2px 16px 14px;font-size:14px;line-height:1.7;white-space:pre-wrap;color:#e8e7e5;border-top:1px solid #2b2a29;padding-top:12px;overflow-wrap:anywhere;user-select:text}
+.script-card .script-actions{display:flex;gap:8px;padding:0 14px 14px}
+.script-card .script-actions button{border:1px solid rgba(76,195,138,.5);background:rgba(76,195,138,.12);color:#4cc38a;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer}
+.script-card .script-actions button:hover{background:rgba(76,195,138,.2)}
