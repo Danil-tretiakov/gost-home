@@ -260,6 +260,7 @@ function ContentPlan({ items, allItems, shoots, summary, month, setMonth, canEdi
           <ul className="split-legend">{planParts.map(p => <li key={p.member}><i className="dot" style={{ background: color(p.member) }} />{p.member} <b>{Math.round(p.n / planTotal * 100)}%</b> <small>{p.n}</small></li>)}</ul>
         </div>}
       </section>
+      <MiniCalendar month={month} rows={inMonth} today={today} />
     </div>
 
     <div className="plan-bar">
@@ -277,6 +278,39 @@ function ContentPlan({ items, allItems, shoots, summary, month, setMonth, canEdi
     <h3 className="group-title">Без даты <span>{bank.length}</span></h3>
     {bank.length ? table(bank) : <p className="empty-line">Все ролики распределены по датам.</p>}
   </div>;
+}
+
+/** Month grid of dots per actor, next to the members table — a quick visual of who publishes when. */
+function monthCalendarCells(month: string): (string | null)[] {
+  const first = new Date(month + '-01T12:00:00');
+  const daysInMonth = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  const firstWeekday = (first.getDay() + 6) % 7; // Monday = 0
+  const cells: (string | null)[] = Array(firstWeekday).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(`${month}-${String(d).padStart(2, '0')}`);
+  while (cells.length % 7) cells.push(null);
+  return cells;
+}
+
+function MiniCalendar({ month, rows, today }: { month: string; rows: PlanRow[]; today: string }) {
+  const byDate = new Map<string, PlanRow[]>();
+  for (const r of rows) { if (!r.date) continue; byDate.set(r.date, [...(byDate.get(r.date) ?? []), r]); }
+  const cells = monthCalendarCells(month);
+  const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+  return <aside className="mini-cal">
+    <div className="card-head"><h2>Календарь</h2></div>
+    <div className="mini-cal-grid">
+      {weekdays.map(w => <span key={w} className="mini-cal-wd">{w}</span>)}
+      {cells.map((date, idx) => {
+        const list = date ? byDate.get(date) ?? [] : [];
+        return <div key={idx} className={'mini-cal-cell' + (date ? '' : ' empty') + (date === today ? ' today' : '')}>
+          {date && <><span className="mini-cal-day">{Number(date.slice(8))}</span>
+            <span className="mini-cal-dots">{list.slice(0, 5).map((r, i) => <i key={i} className="dot" style={{ background: color(r.primaryMember) }} title={`${r.primaryMember}: ${r.title}`} />)}
+              {list.length > 5 && <small>+{list.length - 5}</small>}</span></>}
+        </div>;
+      })}
+    </div>
+    <ul className="mini-cal-legend">{SHOOT_TEAM.map(([name]) => <li key={name}><i className="dot" style={{ background: color(name) }} />{name}</li>)}</ul>
+  </aside>;
 }
 
 function Share({ v, c }: { v: number | null; c: string }) {

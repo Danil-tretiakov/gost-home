@@ -119,6 +119,18 @@ button.kpi:hover{background:#fbfbfa;border-color:#e3e2de}
 
 /* Content plan */
 .plan-top{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:28px;align-items:start;margin-bottom:8px}
+.mini-cal{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fbfbfa;position:sticky;top:20px}
+.mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px}
+.mini-cal-wd{font-size:10px;color:var(--faint);text-align:center;padding-bottom:2px}
+.mini-cal-cell{min-height:38px;border-radius:6px;padding:3px 3px;display:flex;flex-direction:column;gap:2px;background:#fff;border:1px solid var(--line-2)}
+.mini-cal-cell.empty{background:transparent;border-color:transparent}
+.mini-cal-cell.today{border-color:var(--ink)}
+.mini-cal-day{font-size:10px;color:var(--muted)}
+.mini-cal-dots{display:flex;flex-wrap:wrap;gap:2px}
+.mini-cal-dots .dot{width:6px;height:6px;margin-right:0}
+.mini-cal-dots small{font-size:9px;color:var(--faint)}
+.mini-cal-legend{list-style:none;display:flex;flex-wrap:wrap;gap:4px 10px;margin:10px 0 0;padding:0;font-size:12px}
+.mini-cal-legend li{display:flex;align-items:center;gap:5px}
 .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 .card-head h2{font-size:16px;font-weight:600;margin:0}
 .card-head h2::first-letter,.plan-bar h2::first-letter{text-transform:uppercase}
