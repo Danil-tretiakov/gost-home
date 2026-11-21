@@ -19,8 +19,8 @@ export type MetricItem = {
 
 /** When the video was filmed: the linked shoot's date, otherwise its publication (or planned) date. */
 export const shotDateOf = (i: MetricItem) => i.shootDate ?? (i.productionStatus === 'published' ? i.publishedAt ?? i.plannedPublishDate : i.plannedPublishDate);
-/** Filmed in that month: a stage at «Снято» or later, dated by shotDateOf. */
-export const shotInMonth = (i: MetricItem, month: string) => isShotStatus(i.productionStatus) && inMonth(shotDateOf(i), month);
+/** Filmed in that month: a stage at «Снято» or later. Filmed but not yet published content counts wherever its publish date falls, since it is ready stock; the shoot date wins when linked. */
+export const shotInMonth = (i: MetricItem, month: string) => isShotStatus(i.productionStatus) && (i.shootDate ? inMonth(i.shootDate, month) : i.productionStatus === 'published' ? inMonth(shotDateOf(i), month) : true);
 
 const inMonth = (date: string | null, month: string) => !!date && date.slice(0, 7) === month;
 const ACTIVE: ContentStatus[] = ['planned', 'shot', 'editing', 'awaiting_feedback', 'changes_requested', 'approved'];
