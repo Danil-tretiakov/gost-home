@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { CalendarCheck, CalendarClock, Camera, Clapperboard, FileText, Film, Flame, Hammer, Hourglass, PackageCheck, PenLine, TriangleAlert,  House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, CalendarClock, Camera, CheckCheck, Clapperboard, FileText, Film, Flame, Hammer, Hourglass, PackageCheck, PenLine, TriangleAlert,  House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, type LucideIcon } from 'lucide-react';
 import Calendar from './calendar';
 import ContentDrawer from './content-drawer';
 import { SHOOT_TEAM } from '../lib/shoot-team';
@@ -259,6 +259,7 @@ function ContentPlan({ items, allItems, shoots, summary, month, yuliaInterval, c
   const [autoplanOpen, setAutoplanOpen] = useState(false);
   const [type, setType] = useState<'all' | 'reel' | 'youtube'>('all');
   const [who, setWho] = useState('');
+  const [showPublished, setShowPublished] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'status', dir: 1 });
   const shown = items.filter(i => (type === 'all' || i.type === type) && (!who || i.primaryMember === who));
   const today = bangkokToday();
@@ -269,7 +270,8 @@ function ContentPlan({ items, allItems, shoots, summary, month, yuliaInterval, c
   const planTotal = planParts.reduce((a, p) => a + p.n, 0);
 
   // Always-on list of everything still in the pipeline (not published, not cancelled), across all months — sortable, not month-filtered.
-  const pipeline: PlanRow[] = shown.filter(i => i.productionStatus !== 'published' && i.productionStatus !== 'cancelled').map(i => ({ ...i, date: i.plannedPublishDate }));
+  const publishedList: PlanRow[] = shown.filter(i => i.productionStatus === 'published').map(i => ({ ...i, date: i.publishedAt ?? i.plannedPublishDate })).sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+  const pipeline: PlanRow[] = showPublished ? publishedList : shown.filter(i => i.productionStatus !== 'published' && i.productionStatus !== 'cancelled').map(i => ({ ...i, date: i.plannedPublishDate }));
   const sortVal = (i: PlanRow): string | number => sort.key === 'date' ? (i.date ?? '9999-99-99') : sort.key === 'status' ? (STAGE_SORT_ORDER[i.productionStatus] ?? 9) : i[sort.key];
   const sorted = [...pipeline].sort((a, b) => { const av = sortVal(a), bv = sortVal(b); return av < bv ? -sort.dir : av > bv ? sort.dir : 0; });
   const onSort = (key: SortKey) => setSort(s => s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 });
@@ -293,11 +295,12 @@ function ContentPlan({ items, allItems, shoots, summary, month, yuliaInterval, c
     </div>
 
     <div className="plan-bar">
-      <div className="plan-tools"><div className="seg">{(['all', 'reel', 'youtube'] as const).map(t => <button key={t} className={type === t ? 'on' : ''} onClick={() => setType(t)}>{t === 'all' ? 'Все' : CONTENT_TYPE_LABELS[t]}</button>)}</div></div>
+      <div className="plan-tools"><div className="seg">{(['all', 'reel', 'youtube'] as const).map(t => <button key={t} className={type === t ? 'on' : ''} onClick={() => setType(t)}>{t === 'all' ? 'Все' : CONTENT_TYPE_LABELS[t]}</button>)}</div>
+        <button type="button" className={'ghost-btn ' + (showPublished ? 'on' : '')} onClick={() => setShowPublished(v => !v)}><CheckCheck size={14} />{showPublished ? 'К плану' : `Выложено · ${publishedList.length}`}</button></div>
     </div>
     <div className="who-chips" role="group" aria-label="Ведущий"><button type="button" className={'who-chip ' + (who === '' ? 'on' : '')} onClick={() => setWho('')}>Все ведущие</button>
       {summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => <button type="button" key={m.member} className={'who-chip ' + (who === m.member ? 'on' : '')} onClick={() => setWho(who === m.member ? '' : m.member)}><i className="dot" style={{ background: color(m.member) }} />{m.member}</button>)}</div>
-    {sorted.length ? planTable(sorted, ctx, { sort, onSort }) : <p className="empty-line big">В работе ничего нет.</p>}
+    {sorted.length ? planTable(sorted, ctx, { sort, onSort }) : <p className="empty-line big">{showPublished ? 'Выложенных роликов пока нет.' : 'В работе ничего нет.'}</p>}
     {canEdit && <button className="add-row" onClick={() => onAdd(today)}><Plus size={14} /> Новый ролик</button>}
   </div>;
 }
