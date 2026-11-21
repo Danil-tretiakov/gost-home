@@ -139,7 +139,6 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
               <input type="checkbox" checked={draft.participants.includes(name)} onChange={e => setDraft({ ...draft, participants: e.target.checked ? [...draft.participants, name] : draft.participants.filter(p => p !== name) })} />{name}</label>)}
           </fieldset>
           <label>Объекты и локации (для внутренней работы, через запятую)<input maxLength={2000} value={draft.places.join(', ')} onChange={e => setDraft({ ...draft, places: e.target.value.split(',').map(s => s.trimStart()) })} /></label>
-          <label>{isNew ? 'Ссылка на монтаж (Google Диск)' : 'Ссылка на текущий монтаж (новая версия добавляется выше)'}<input type="url" inputMode="url" placeholder="https://drive.google.com/…" maxLength={1000} value={draft.driveUrl} onChange={e => setDraft({ ...draft, driveUrl: e.target.value })} /></label>
           {draft.driveUrl && /^https:\/\//.test(draft.driveUrl) && <a className="link-button" href={draft.driveUrl} target="_blank" rel="noreferrer noopener">Открыть монтаж ↗</a>}
           <label>Сценарий, описание, референсы<textarea rows={6} maxLength={10000} value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} /></label>
         </fieldset>
