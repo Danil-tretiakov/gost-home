@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { CalendarCheck, CalendarClock, Camera, Clapperboard, FileText, Film, Flame, Hammer, Hourglass, PackageCheck, PenLine, TriangleAlert,  House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Wand2, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, CalendarClock, Camera, Clapperboard, FileText, Film, Flame, Hammer, Hourglass, PackageCheck, PenLine, TriangleAlert,  House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, type LucideIcon } from 'lucide-react';
 import Calendar from './calendar';
 import ContentDrawer from './content-drawer';
 import { SHOOT_TEAM } from '../lib/shoot-team';
@@ -280,8 +280,7 @@ function ContentPlan({ items, allItems, shoots, summary, month, yuliaInterval, c
     </div>
 
     <div className="plan-bar">
-      <div className="plan-tools"><div className="seg">{(['all', 'reel', 'youtube'] as const).map(t => <button key={t} className={type === t ? 'on' : ''} onClick={() => setType(t)}>{t === 'all' ? 'Все' : CONTENT_TYPE_LABELS[t]}</button>)}</div>
-        {canEdit && !autoplanOpen && <button className="ghost-btn" onClick={() => setAutoplanOpen(true)}><Wand2 size={14} /> Автоплан</button>}</div>
+      <div className="plan-tools"><div className="seg">{(['all', 'reel', 'youtube'] as const).map(t => <button key={t} className={type === t ? 'on' : ''} onClick={() => setType(t)}>{t === 'all' ? 'Все' : CONTENT_TYPE_LABELS[t]}</button>)}</div></div>
     </div>
     <div className="who-chips" role="group" aria-label="Ведущий"><button type="button" className={'who-chip ' + (who === '' ? 'on' : '')} onClick={() => setWho('')}>Все ведущие</button>
       {summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => <button type="button" key={m.member} className={'who-chip ' + (who === m.member ? 'on' : '')} onClick={() => setWho(who === m.member ? '' : m.member)}><i className="dot" style={{ background: color(m.member) }} />{m.member}</button>)}</div>
