@@ -312,7 +312,7 @@ function MiniCalendar({ month, allItems, today, members }: { month: string; allI
   const rows = SHOOT_TEAM.filter(([name]) => members.includes(name));
   const cells = monthCalendarCells(month);
   const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
-  return <aside className="mini-cal">
+  return <section className="mini-cal">
     <div className="card-head"><h2>Календарь · {monthLabel(month)}</h2></div>
     <div className="mini-cal-grid">
       {weekdays.map(w => <span key={w} className="mini-cal-wd">{w}</span>)}
@@ -331,7 +331,7 @@ function MiniCalendar({ month, allItems, today, members }: { month: string; allI
       <li><i className="rdot ready" /> готово к выкладке</li><li><i className="rdot pending" /> ещё не готово</li>
     </ul>
     <ul className="mini-cal-legend">{rows.map(([name]) => <li key={name}><i className="dot" style={{ background: color(name) }} />{name}</li>)}</ul>
-  </aside>;
+  </section>;
 }
 
 type Block = { key: string; title: string; hint: string; statuses: ContentStatus[] };
