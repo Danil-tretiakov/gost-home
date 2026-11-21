@@ -168,7 +168,6 @@ function Home({ summary, items, shoots, today, month, onOpen, onOpenShoot, onGo,
   return <div className="home">
     <div className="kpis">
       <Kpi label={`Reels · ${monthLabel(month)}`} value={summary.reels.published} of={summary.reels.target} note={`запланировано ${summary.reels.scheduled}`} />
-      <Kpi label="YouTube" value={summary.youtube.published} of={summary.youtube.target} note={`запланировано ${summary.youtube.scheduled}`} />
       <Kpi label="В производстве" value={summary.inProduction} note={`${summary.awaitingFeedback} ждёт согласования · ${summary.changesRequested} на правках`} onClick={() => onGo('content')} />
       <Kpi label="Готовый запас" value={summary.readyStock} note={summary.coverage.upcomingSlots ? `обеспечено слотов подряд: ${summary.coverage.coveredSlots} из ${summary.coverage.upcomingSlots}` : 'будущих слотов нет'} onClick={() => onGo('content')} />
     </div>
