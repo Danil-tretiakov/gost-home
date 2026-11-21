@@ -269,7 +269,7 @@ function ContentPlan({ items, allItems, shoots, summary, month, canEdit, access,
           <ul className="split-legend">{planParts.map(p => <li key={p.member}><i className="dot" style={{ background: color(p.member) }} />{p.member} <b>{Math.round(p.n / planTotal * 100)}%</b> <small>{p.n}</small></li>)}</ul>
         </div>}
       </section>
-      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} />
+      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} canEdit={canEdit} />
     </div>
 
     <div className="plan-bar">
@@ -294,10 +294,23 @@ function monthCalendarCells(month: string): (string | null)[] {
   return cells;
 }
 
-type CalEntry = { title: string; ready: boolean };
+type CalEntry = { title: string; ready: boolean; planned?: boolean };
+type AutoSlot = { date: string; member: string; kind: 'assign' | 'new' | 'empty'; title: string };
+
+function useAutoplanSlots(month: string, enabled: boolean, version: unknown): AutoSlot[] {
+  const [slots, setSlots] = useState<AutoSlot[]>([]);
+  useEffect(() => {
+    if (!enabled) { setSlots([]); return; }
+    let live = true;
+    api<{ slots: AutoSlot[] }>(`/api/content/autoplan?month=${month}&fillEmpty=1`).then(r => { if (live) setSlots(r.slots); }).catch(() => { if (live) setSlots([]); });
+    return () => { live = false; };
+  }, [month, enabled, version]);
+  return slots;
+}
 
 /** Month calendar: one fixed row per active member (same order every day, from SHOOT_TEAM), filled only from real dated items — nothing projected or guessed. A row stays blank if that member has nothing dated that day. */
-function MiniCalendar({ month, allItems, today, members }: { month: string; allItems: ContentItem[]; today: string; members: string[] }) {
+function MiniCalendar({ month, allItems, today, members, canEdit }: { month: string; allItems: ContentItem[]; today: string; members: string[]; canEdit: boolean }) {
+  const auto = useAutoplanSlots(month, canEdit, allItems);
   const dateOf = (i: ContentItem) => i.productionStatus === 'published' && i.publishedAt ? i.publishedAt : i.plannedPublishDate;
   const byDateMember = new Map<string, Map<string, CalEntry>>();
   for (const i of allItems) {
@@ -308,6 +321,13 @@ function MiniCalendar({ month, allItems, today, members }: { month: string; allI
     const forDate = byDateMember.get(d) ?? new Map<string, CalEntry>();
     forDate.set(i.primaryMember, { title: i.title, ready });
     byDateMember.set(d, forDate);
+  }
+  for (const a of auto) {
+    if (!a.date.startsWith(month)) continue;
+    const forDate = byDateMember.get(a.date) ?? new Map<string, CalEntry>();
+    if (forDate.has(a.member)) continue;
+    forDate.set(a.member, { title: a.kind === 'assign' ? `${a.title} (дата не закреплена)` : 'нужно подготовить ролик', ready: false, planned: true });
+    byDateMember.set(a.date, forDate);
   }
   const rows = SHOOT_TEAM.filter(([name]) => members.includes(name));
   const cells = monthCalendarCells(month);
@@ -321,14 +341,14 @@ function MiniCalendar({ month, allItems, today, members }: { month: string; allI
         return <div key={idx} className={'mini-cal-cell' + (date ? '' : ' empty') + (date === today ? ' today' : '')}>
           {date && <><span className="mini-cal-day">{Number(date.slice(8))}</span>
             {rows.map(([name]) => { const e = forDate?.get(name); return <div key={name} className="mc-row">
-              {e && <span className="mc-item" style={{ '--c': color(name) } as React.CSSProperties} title={`${name}: ${e.title}`}>
+              {e && <span className={'mc-item' + (e.planned ? ' planned' : '')} style={{ '--c': color(name) } as React.CSSProperties} title={`${name}: ${e.title}`}>
                 <i className={'rdot ' + (e.ready ? 'ready' : 'pending')} />{name}</span>}
             </div>; })}</>}
         </div>;
       })}
     </div>
     <ul className="mini-cal-legend">
-      <li><i className="rdot ready" /> готово к выкладке</li><li><i className="rdot pending" /> ещё не готово</li>
+      <li><i className="rdot ready" /> готово к выкладке</li><li><i className="rdot pending" /> ещё не готово</li><li><span className="mc-item planned legend-sample" style={{ '--c': '#9a9a94' } as React.CSSProperties}>Имя</span> слот по плану, ролика ещё нет</li>
     </ul>
     <ul className="mini-cal-legend">{rows.map(([name]) => <li key={name}><i className="dot" style={{ background: color(name) }} />{name}</li>)}</ul>
   </section>;
