@@ -269,7 +269,7 @@ function ContentPlan({ items, allItems, shoots, summary, month, canEdit, access,
           <ul className="split-legend">{planParts.map(p => <li key={p.member}><i className="dot" style={{ background: color(p.member) }} />{p.member} <b>{Math.round(p.n / planTotal * 100)}%</b> <small>{p.n}</small></li>)}</ul>
         </div>}
       </section>
-      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} canEdit={canEdit} />
+      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} needs={Object.fromEntries(summary.members.map(m => [m.member, Math.max(0, m.target - m.scheduled)]))} />
     </div>
 
     <div className="plan-bar">
@@ -295,22 +295,9 @@ function monthCalendarCells(month: string): (string | null)[] {
 }
 
 type CalEntry = { title: string; ready: boolean; planned?: boolean };
-type AutoSlot = { date: string; member: string; kind: 'assign' | 'new' | 'empty'; title: string };
 
-function useAutoplanSlots(month: string, enabled: boolean, version: unknown): AutoSlot[] {
-  const [slots, setSlots] = useState<AutoSlot[]>([]);
-  useEffect(() => {
-    if (!enabled) { setSlots([]); return; }
-    let live = true;
-    api<{ slots: AutoSlot[] }>(`/api/content/autoplan?month=${month}&fillEmpty=1`).then(r => { if (live) setSlots(r.slots); }).catch(() => { if (live) setSlots([]); });
-    return () => { live = false; };
-  }, [month, enabled, version]);
-  return slots;
-}
-
-/** Month calendar: one fixed row per active member (same order every day, from SHOOT_TEAM), filled only from real dated items — nothing projected or guessed. A row stays blank if that member has nothing dated that day. */
-function MiniCalendar({ month, allItems, today, members, canEdit }: { month: string; allItems: ContentItem[]; today: string; members: string[]; canEdit: boolean }) {
-  const auto = useAutoplanSlots(month, canEdit, allItems);
+/** Month calendar: one fixed row per active member (same order every day, from SHOOT_TEAM). Real dated items are solid; empty future days get one dashed planned placeholder. */
+function MiniCalendar({ month, allItems, today, members, needs }: { month: string; allItems: ContentItem[]; today: string; members: string[]; needs: Record<string, number> }) {
   const dateOf = (i: ContentItem) => i.productionStatus === 'published' && i.publishedAt ? i.publishedAt : i.plannedPublishDate;
   const byDateMember = new Map<string, Map<string, CalEntry>>();
   for (const i of allItems) {
@@ -322,12 +309,17 @@ function MiniCalendar({ month, allItems, today, members, canEdit }: { month: str
     forDate.set(i.primaryMember, { title: i.title, ready });
     byDateMember.set(d, forDate);
   }
-  for (const a of auto) {
-    if (!a.date.startsWith(month)) continue;
-    const forDate = byDateMember.get(a.date) ?? new Map<string, CalEntry>();
-    if (forDate.has(a.member)) continue;
-    forDate.set(a.member, { title: a.kind === 'assign' ? `${a.title} (дата не закреплена)` : 'нужно подготовить ролик', ready: false, planned: true });
-    byDateMember.set(a.date, forDate);
+  // Planned placeholders: one per empty future day, picked by largest remaining monthly quota (share-weighted), never the same actor as a neighbouring day. Display only, nothing is saved.
+  const left = { ...needs };
+  const planned: Record<string, number> = {};
+  const days = monthCalendarCells(month).filter((d): d is string => !!d);
+  for (const d of days) {
+    if (d < today || byDateMember.has(d)) continue;
+    const near = [-1, 1].flatMap(k => { const n = days[days.indexOf(d) + k]; return n ? [...(byDateMember.get(n)?.keys() ?? [])] : []; });
+    const pick = Object.keys(left).filter(m => left[m] > 0 && !near.includes(m)).sort((x, y) => left[y] / ((planned[y] ?? 0) + 1) - left[x] / ((planned[x] ?? 0) + 1))[0];
+    if (!pick) continue;
+    left[pick]--; planned[pick] = (planned[pick] ?? 0) + 1;
+    byDateMember.set(d, new Map([[pick, { title: 'нужно подготовить ролик', ready: false, planned: true }]]));
   }
   const rows = SHOOT_TEAM.filter(([name]) => members.includes(name));
   const cells = monthCalendarCells(month);
