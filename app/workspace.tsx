@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { BadgeCheck, Clapperboard, FileText, House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Sparkles, Wand2, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, Clapperboard, FileText, House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Wand2, type LucideIcon } from 'lucide-react';
 import Calendar from './calendar';
 import ContentDrawer from './content-drawer';
 import { SHOOT_TEAM } from '../lib/shoot-team';
@@ -18,7 +18,7 @@ import { NotificationBell, type NoteItem } from './notifications';
 type Section = 'home' | 'tasks' | 'shoots' | 'content' | 'approval' | 'ai' | 'settings';
 const NAV: [Section, LucideIcon, string][] = [
   ['home', House, 'Главная'], ['tasks', ListChecks, 'Задачник'], ['shoots', Clapperboard, 'Календарь съёмок'], ['content', FileText, 'Контент-план'],
-  ['approval', BadgeCheck, 'Согласование'], ['ai', Sparkles, 'Higgsfield AI'], ['settings', SettingsIcon, 'Настройки'],
+  ['approval', BadgeCheck, 'Согласование'], ['settings', SettingsIcon, 'Настройки'],
 ];
 const color = (name: string) => SHOOT_TEAM.find(t => t[0] === name)?.[2] ?? '#889';
 
