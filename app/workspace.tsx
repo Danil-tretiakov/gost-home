@@ -56,6 +56,13 @@ export default function Workspace({ access }: { access: ClientAccess }) {
     setLoading(false);
   }, [internal]);
   useEffect(() => { Promise.resolve().then(load); }, [load]);
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') void load(); };
+    const timer = window.setInterval(refresh, 30000);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('focus', refresh); };
+  }, [load]);
   const go = (s: Section) => { if (s === 'home') history.pushState(null, '', location.pathname); else location.hash = s; window.dispatchEvent(new HashChangeEvent('hashchange')); };
 
   function openNote(n: NoteItem) {
