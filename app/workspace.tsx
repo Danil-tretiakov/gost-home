@@ -319,8 +319,7 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets, yu
     forDate.set(i.primaryMember, { title: i.title, ready });
     byDateMember.set(d, forDate);
   }
-  // Planned placeholders: one per empty future day, picked by largest remaining monthly quota (share-weighted), never the same actor as a neighbouring day. Display only, nothing is saved.
-  const left = Object.fromEntries(Object.entries(targets).map(([m, t]) => [m, Math.max(0, t - (realCount[m] ?? 0))]));
+  // Planned placeholders for empty future days, paced evenly: each actor's ideal spacing is month length / monthly target, a slot only goes to someone far enough from their nearest dated reel (and not over quota), the most overdue first. Actors with no dated reel are anchored at today so they come later. Display only, nothing is saved.
   const planned: Record<string, number> = {};
   const days = monthCalendarCells(month).filter((d): d is string => !!d);
   // Юля goes on a fixed rhythm: every `yuliaInterval` days, with a gap one day shorter every 4th time (the extra different-format reels, about twice a month), counted from her earliest dated reel; everyone else fills the remaining days.
@@ -329,13 +328,20 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets, yu
   const yuliaDays = new Set<number>();
   if (yuliaDates.length && 'Юля' in targets) { let n = dayNum(yuliaDates[0]); for (let k = 0; n < dayNum(yuliaDates[0]) + 400; k++) { yuliaDays.add(n); n += Math.max(1, yuliaInterval - (k % 4 === 2 ? 1 : 0)); } }
   const isYuliaDay = (d: string) => yuliaDays.has(dayNum(d));
+  const anchors: Record<string, number[]> = {};
+  for (const i of allItems) { const d = dateOf(i); if (d && i.productionStatus !== 'cancelled') (anchors[i.primaryMember] ??= []).push(dayNum(d)); }
   for (const d of days) {
     if (d < today || byDateMember.has(d)) continue;
     if (isYuliaDay(d)) { byDateMember.set(d, new Map([['Юля', { title: 'нужно подготовить ролик', ready: false, planned: true }]])); continue; }
-    const near = [-1, 1].flatMap(k => { const n = days[days.indexOf(d) + k]; return n ? [...(byDateMember.get(n)?.keys() ?? [])] : []; });
-    const pick = Object.keys(left).filter(m => m !== 'Юля' && left[m] > 0 && !near.includes(m)).sort((x, y) => left[y] / ((planned[y] ?? 0) + 1) - left[x] / ((planned[x] ?? 0) + 1))[0];
+    const dn = dayNum(d);
+    const pick = Object.keys(targets).filter(m => m !== 'Юля' && targets[m] > 0 && (realCount[m] ?? 0) + (planned[m] ?? 0) < targets[m]).map(m => {
+      const interval = Math.max(1, Math.round(days.length / targets[m]));
+      const dist = Math.min(...(anchors[m] ?? [dayNum(today)]).map(a => Math.abs(dn - a)));
+      return { m, dist, interval, ok: dist >= Math.max(2, Math.ceil(interval * 0.8)), score: dist / interval };
+    }).filter(c => c.ok).sort((x, y) => y.score - x.score)[0]?.m;
     if (!pick) continue;
-    left[pick]--; planned[pick] = (planned[pick] ?? 0) + 1;
+    planned[pick] = (planned[pick] ?? 0) + 1;
+    (anchors[pick] ??= []).push(dn);
     byDateMember.set(d, new Map([[pick, { title: 'нужно подготовить ролик', ready: false, planned: true }]]));
   }
   const rows = SHOOT_TEAM.filter(([name]) => members.includes(name));
