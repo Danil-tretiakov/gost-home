@@ -11,7 +11,7 @@ import { getUpcomingShoots, upcomingDayLabel } from '../lib/upcoming-shoots';
 import { newTaskDraft, TaskBoard, TaskDrawer, TaskRow, type TaskDraft } from './tasks';
 import { urgentTasks, type Task, type TaskFolder } from '../lib/tasks';
 import { AiStudio, AutoplanPanel, BackupPanel, IntegrationsPanel } from './workspace-panels';
-import { api, bangkokToday, dayLabel, monthLabel, newContentDraft, type ClientAccess, type ContentDraft, type ContentItem, type Shoot } from './workspace-types';
+import { api, bangkokToday, dayLabel, monthLabel, newContentDraft, type ClientAccess, type ContentDraft, type ContentItem, type Shoot, shiftMonth } from './workspace-types';
 import { TeamPanel } from './team-panel';
 import { NotificationBell, type NoteItem } from './notifications';
 
@@ -269,7 +269,7 @@ function ContentPlan({ items, allItems, shoots, summary, month, canEdit, access,
           <ul className="split-legend">{planParts.map(p => <li key={p.member}><i className="dot" style={{ background: color(p.member) }} />{p.member} <b>{Math.round(p.n / planTotal * 100)}%</b> <small>{p.n}</small></li>)}</ul>
         </div>}
       </section>
-      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} needs={Object.fromEntries(summary.members.map(m => [m.member, Math.max(0, m.target - m.scheduled)]))} />
+      <MiniCalendar month={month} allItems={allItems} today={today} members={summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => m.member)} targets={Object.fromEntries(summary.members.map(m => [m.member, m.target]))} />
     </div>
 
     <div className="plan-bar">
@@ -297,20 +297,23 @@ function monthCalendarCells(month: string): (string | null)[] {
 type CalEntry = { title: string; ready: boolean; planned?: boolean };
 
 /** Month calendar: one fixed row per active member (same order every day, from SHOOT_TEAM). Real dated items are solid; empty future days get one dashed planned placeholder. */
-function MiniCalendar({ month, allItems, today, members, needs }: { month: string; allItems: ContentItem[]; today: string; members: string[]; needs: Record<string, number> }) {
+function MiniCalendar({ month: startMonth, allItems, today, members, targets }: { month: string; allItems: ContentItem[]; today: string; members: string[]; targets: Record<string, number> }) {
+  const [month, setMonth] = useState(startMonth);
   const dateOf = (i: ContentItem) => i.productionStatus === 'published' && i.publishedAt ? i.publishedAt : i.plannedPublishDate;
   const byDateMember = new Map<string, Map<string, CalEntry>>();
+  const realCount: Record<string, number> = {};
   for (const i of allItems) {
     if (i.productionStatus === 'cancelled') continue;
     const d = dateOf(i);
     if (!d || !d.startsWith(month)) continue;
+    realCount[i.primaryMember] = (realCount[i.primaryMember] ?? 0) + 1;
     const ready = i.productionStatus === 'approved' || i.productionStatus === 'published';
     const forDate = byDateMember.get(d) ?? new Map<string, CalEntry>();
     forDate.set(i.primaryMember, { title: i.title, ready });
     byDateMember.set(d, forDate);
   }
   // Planned placeholders: one per empty future day, picked by largest remaining monthly quota (share-weighted), never the same actor as a neighbouring day. Display only, nothing is saved.
-  const left = { ...needs };
+  const left = Object.fromEntries(Object.entries(targets).map(([m, t]) => [m, Math.max(0, t - (realCount[m] ?? 0))]));
   const planned: Record<string, number> = {};
   const days = monthCalendarCells(month).filter((d): d is string => !!d);
   for (const d of days) {
@@ -325,7 +328,10 @@ function MiniCalendar({ month, allItems, today, members, needs }: { month: strin
   const cells = monthCalendarCells(month);
   const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
   return <section className="mini-cal">
-    <div className="card-head"><h2>Календарь · {monthLabel(month)}</h2></div>
+    <div className="card-head"><h2>Календарь · {monthLabel(month)}</h2>
+      <div className="cal-nav"><button type="button" aria-label="Предыдущий месяц" onClick={() => setMonth(shiftMonth(month, -1))}>‹</button>
+        <button type="button" className="cal-today" onClick={() => setMonth(startMonth)}>Сегодня</button>
+        <button type="button" aria-label="Следующий месяц" onClick={() => setMonth(shiftMonth(month, 1))}>›</button></div></div>
     <div className="mini-cal-grid">
       {weekdays.map(w => <span key={w} className="mini-cal-wd">{w}</span>)}
       {cells.map((date, idx) => {
