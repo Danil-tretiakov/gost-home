@@ -251,8 +251,8 @@ function ContentPlan({ items, allItems, shoots, summary, month, yuliaInterval, c
   const today = bangkokToday();
   const ctx: RowCtx = { canEdit, today, shoots, onOpen, onReschedule, onQuick };
   const shotTotal = summary.members.reduce((a, m) => a + m.shot, 0);
-  // Month plan by lead: Reels with a publication date in this month (published ones included), as a share of all of them.
-  const planParts = summary.members.map(m => ({ member: m.member, n: m.scheduled })).filter(p => p.n > 0);
+  // Month plan by lead: each member's monthly quota (the «План» column) as a share of all Reels.
+  const planParts = summary.members.map(m => ({ member: m.member, n: m.target })).filter(p => p.n > 0);
   const planTotal = planParts.reduce((a, p) => a + p.n, 0);
 
   // Always-on list of everything still in the pipeline (not published, not cancelled), across all months — sortable, not month-filtered.
