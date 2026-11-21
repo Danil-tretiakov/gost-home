@@ -26,7 +26,7 @@ export async function GET() {
     const turns = buildReviewTurns(versions, returns);
     const memberName = a.role === 'owner' ? 'Данил' : a.memberName;
     const content = c.map(row => ({ ...row, reviewTurn: turns.get(row.id) ?? null }));
-    const items = buildNotifications({ caps: a.caps, memberName, tasks: t as Task[], content, jobs: j, assets: as, shoots: sh, instagram: ig[0] ?? null });
+    const items = buildNotifications({ caps: a.caps, memberName, tasks: a.role === 'owner' ? t as Task[] : [], content, jobs: j, assets: as, shoots: sh, instagram: ig[0] ?? null });
     const read = new Set(reads.map(r => r.key));
     const list = items.map(n => ({ ...n, read: read.has(n.key) }));
     return Response.json({ items: list, unread: list.filter(n => !n.read).length }, { headers: { 'Cache-Control': 'no-store' } });

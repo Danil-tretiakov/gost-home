@@ -10,6 +10,11 @@ export async function actorWith(cap: keyof Caps): Promise<string | null> {
 export const currentEditor = () => actorWith('edit');
 /** Anyone allowed to read internal data (viewer, reviewer, admin, owner). */
 export const internalReader = () => actorWith('internal');
+/** Only the owner (Данил): the planner is private, even other team members and view-only visitors don't see it. */
+export async function ownerOnly(): Promise<string | null> {
+  const a = await getAccess();
+  return a.role === 'owner' ? a.name ?? a.email : null;
+}
 
 export function sameOrigin(req: Request) {
   const origin = req.headers.get('origin');

@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { getD1, getDb } from '../../../db';
 import { contentItems, shoots, taskFolders, tasks } from '../../../db/schema';
-import { currentEditor, forbidden, internalReader, sameOrigin } from '../../../lib/actor';
+import { forbidden, ownerOnly, sameOrigin } from '../../../lib/actor';
 import { isUuid } from '../../../lib/content-values';
 import { type D1 } from '../../../lib/content-writes';
 import { applyTaskArchive, applyTaskCreate, applyTaskUpdate } from '../../../lib/task-writes';
@@ -13,7 +13,7 @@ const noStore = { 'Cache-Control': 'no-store' };
 
 /** Tasks are internal: only the signed-in editor can read them. Archived tasks are included (the board filters them). */
 export async function GET() {
-  if (!(await internalReader())) return forbidden();
+  if (!(await ownerOnly())) return forbidden();
   try { return Response.json(await getDb().select().from(tasks), { headers: noStore }); }
   catch { return bad('Не удалось загрузить задачи', 503); }
 }
@@ -31,7 +31,7 @@ async function linksExist(shootId: string | null, contentId: string | null, fold
 
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return forbidden(req);
-  const actor = await currentEditor();
+  const actor = await ownerOnly();
   if (!actor) return forbidden(req);
   let x: Record<string, unknown>;
   try { x = await req.json(); } catch { return bad('Неверный запрос'); }

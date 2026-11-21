@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { getD1, getDb } from '../../../../db';
 import { taskFolders } from '../../../../db/schema';
-import { currentEditor, forbidden, internalReader, sameOrigin } from '../../../../lib/actor';
+import { forbidden, ownerOnly, sameOrigin } from '../../../../lib/actor';
 import { isUuid } from '../../../../lib/content-values';
 import { type D1 } from '../../../../lib/content-writes';
 import { applyFolderCreate, applyFolderUpdate } from '../../../../lib/task-writes';
@@ -13,7 +13,7 @@ const noStore = { 'Cache-Control': 'no-store' };
 
 /** Planner folders: internal, like tasks. Archived folders are included (the board hides them). */
 export async function GET() {
-  if (!(await internalReader())) return forbidden();
+  if (!(await ownerOnly())) return forbidden();
   try { return Response.json(await getDb().select().from(taskFolders), { headers: noStore }); }
   catch { return bad('Не удалось загрузить папки', 503); }
 }
@@ -23,7 +23,7 @@ async function load(id: string) { const [f] = await getDb().select().from(taskFo
 /** {action: create | rename | archive | restore, id, name?, revision?}. Archiving never deletes tasks: they show as «Без папки». */
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return forbidden(req);
-  const actor = await currentEditor();
+  const actor = await ownerOnly();
   if (!actor) return forbidden(req);
   let x: Record<string, unknown>;
   try { x = await req.json(); } catch { return bad('Неверный запрос'); }

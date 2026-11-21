@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { CalendarCheck, CalendarClock, Camera, Clapperboard, FileText, Film, Flame, Hammer, Hourglass, PackageCheck, PenLine, TriangleAlert,  House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, CalendarClock, Camera, Clapperboard, FileText, Film, Flame, Hammer, Hourglass, PackageCheck, PenLine, TriangleAlert,  House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, type LucideIcon } from 'lucide-react';
 import Calendar from './calendar';
 import ContentDrawer from './content-drawer';
 import { SHOOT_TEAM } from '../lib/shoot-team';
@@ -18,7 +18,6 @@ import { NotificationBell, type NoteItem } from './notifications';
 type Section = 'home' | 'tasks' | 'shoots' | 'content' | 'approval' | 'ai' | 'settings';
 const NAV: [Section, LucideIcon, string][] = [
   ['home', House, 'Главная'], ['tasks', ListChecks, 'Задачник'], ['shoots', Clapperboard, 'Календарь съёмок'], ['content', FileText, 'Контент-план'],
-  ['settings', SettingsIcon, 'Настройки'],
 ];
 const color = (name: string) => SHOOT_TEAM.find(t => t[0] === name)?.[2] ?? '#889';
 
@@ -26,6 +25,7 @@ export default function Workspace({ access }: { access: ClientAccess }) {
   const { caps } = access;
   const canEdit = caps.edit;
   const internal = caps.internal;
+  const ownsTasks = access.role === 'owner'; // the planner is private to the owner
   const section = useSyncExternalStore(subscribeHash, readHash, () => 'home' as Section);
   const [collapsed, setCollapsed] = useState(false);
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -44,8 +44,8 @@ export default function Workspace({ access }: { access: ClientAccess }) {
 
   const load = useCallback(async () => {
     const results = await Promise.allSettled([api<ContentItem[]>('/api/content'), api<Shoot[]>('/api/shoots'), api<{ plan: PlanSettings; revision: number }>('/api/settings'),
-      internal ? api<Task[]>('/api/tasks') : Promise.resolve([] as Task[]),
-      internal ? api<TaskFolder[]>('/api/tasks/folders') : Promise.resolve([] as TaskFolder[])]);
+      ownsTasks ? api<Task[]>('/api/tasks') : Promise.resolve([] as Task[]),
+      ownsTasks ? api<TaskFolder[]>('/api/tasks/folders') : Promise.resolve([] as TaskFolder[])]);
     if (results[3].status === 'fulfilled') setTasks(results[3].value);
     if (results[4].status === 'fulfilled') setTaskFolders(results[4].value);
     if (results[0].status === 'fulfilled') setItems(results[0].value);
@@ -104,7 +104,7 @@ export default function Workspace({ access }: { access: ClientAccess }) {
     <aside className="side">
       <div className="side-top"><button className="brand" onClick={() => go('home')} title="GOST HOME"><span className="logo" aria-hidden>G</span><span className="brand-text">GOST HOME<i>Content studio</i></span></button>
         <button className="collapse icon-btn" aria-label={collapsed ? 'Развернуть меню' : 'Свернуть меню'} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</button></div>
-      <nav aria-label="Разделы">{NAV.filter(n => n[0] !== 'tasks' || internal).map(([key, NavIcon, label]) => <button key={key} className={'nav ' + (section === key ? 'active' : '')} aria-current={section === key ? 'page' : undefined} onClick={() => go(key)} title={label}>
+      <nav aria-label="Разделы">{NAV.filter(n => n[0] !== 'tasks' || ownsTasks).map(([key, NavIcon, label]) => <button key={key} className={'nav ' + (section === key ? 'active' : '')} aria-current={section === key ? 'page' : undefined} onClick={() => go(key)} title={label}>
         <span className="nav-icon" aria-hidden><NavIcon size={17} strokeWidth={1.8} /></span><span className="nav-label">{label}</span>
         {key === 'approval' && summary.awaitingFeedback > 0 && <em>{summary.awaitingFeedback}</em>}</button>)}</nav>
       {internal && <NotificationBell refreshKey={items.length + tasks.length} onOpen={openNote} />}
@@ -114,7 +114,7 @@ export default function Workspace({ access }: { access: ClientAccess }) {
 
     {section === 'shoots' ? <Calendar key={openShootId ?? 'calendar'} canEdit={canEdit} signInHref={access.signInHref} content={items} openShootId={openShootId} onShootOpened={() => setOpenShootId(null)}
       onOpenContent={open} onAddContent={shootId => { const s = shoots.find(x => x.id === shootId); setDrawer(newContentDraft({ shootId, primaryMember: s?.participants[0] ?? 'Юля', participants: s?.participants.slice(1) ?? [], type: s?.format === 'YouTube' ? 'youtube' : 'reel' })); }}
-      onShootsChanged={setShoots} tasks={internal ? tasks : undefined} onOpenTask={t => openTask(t)} onAddTask={shootId => openTask(newTaskDraft({ shootId }))} /> :
+      onShootsChanged={setShoots} tasks={ownsTasks ? tasks : undefined} onOpenTask={t => openTask(t)} onAddTask={shootId => openTask(newTaskDraft({ shootId }))} /> :
       <main className="section-main">
         <header className="section-head">
           <div><div className="crumbs">GOST HOME <span>/</span> {NAV.find(n => n[0] === section)![2]}</div>
@@ -129,8 +129,8 @@ export default function Workspace({ access }: { access: ClientAccess }) {
         </header>
         {error && <div role="alert" className="error">{error} <button className="small" onClick={() => { setLoading(true); load(); }}>Повторить</button></div>}
         {loading ? <div className="skeleton" aria-busy="true">Загружаем…</div> :
-          section === 'home' ? <Home summary={summary} items={items} shoots={shoots} today={today} month={month} onOpen={open} onOpenShoot={id => { setOpenShootId(id); go('shoots'); }} onGo={go} taskList={internal ? tasks : null} onOpenTask={openTask} /> :
-          section === 'tasks' ? (internal ? <TaskBoard tasks={tasks} folders={taskFolders} shoots={shoots} items={items} onOpen={openTask} onSaved={upsertTask} onFolderSaved={upsertFolder} readOnly={!canEdit} /> : <div className="panel placeholder"><h2>Только для команды</h2></div>) :
+          section === 'home' ? <Home summary={summary} items={items} shoots={shoots} today={today} month={month} onOpen={open} onOpenShoot={id => { setOpenShootId(id); go('shoots'); }} onGo={go} taskList={ownsTasks ? tasks : null} onOpenTask={openTask} /> :
+          section === 'tasks' ? (ownsTasks ? <TaskBoard tasks={tasks} folders={taskFolders} shoots={shoots} items={items} onOpen={openTask} onSaved={upsertTask} onFolderSaved={upsertFolder} readOnly={!canEdit} /> : <div className="panel placeholder"><h2>Только для владельца</h2></div>) :
           section === 'content' ? <ContentPlan yuliaInterval={plan.yuliaIntervalDays} items={visible} allItems={items} shoots={shoots} summary={summary} month={month} setMonth={setMonth} canEdit={canEdit} access={access} onOpen={open} onReschedule={reschedule} onQuick={quickStatus} onAdd={date => setDrawer(newContentDraft({ plannedPublishDate: date }))} onReload={load} /> :
           section === 'approval' ? <Approval items={visible} shoots={shoots} canEdit={canEdit} summary={summary} month={month} onOpen={open} onReschedule={reschedule} onQuick={quickStatus} /> :
           section === 'ai' ? <AiStudio items={items} canEdit={canEdit} canRead={internal} /> :
