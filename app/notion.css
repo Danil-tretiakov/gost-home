@@ -120,8 +120,10 @@ button.kpi:hover{background:#fbfbfa;border-color:#e3e2de}
 .plan-table th.sortable:hover{color:var(--ink-2)}
 
 /* Content plan */
-.plan-top{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:stretch;margin-bottom:8px}
-.members-card{font-size:13px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fbfbfa;box-sizing:border-box}
+.plan-top{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-bottom:8px}
+.members-card{font-size:13px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fbfbfa;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);column-gap:32px;align-items:start}
+.members-card .card-head{grid-column:1/-1}
+.members-card .plan-split{margin-top:0;align-self:center}
 .members-card .members-table{font-size:12px}
 .members-card .members-table th,.members-card .members-table td{padding:4px 6px}
 .mini-cal{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fbfbfa;box-sizing:border-box}
