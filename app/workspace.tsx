@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { BadgeCheck, ChevronLeft, ChevronRight, Clapperboard, FileText, House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Sparkles, Wand2, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, Clapperboard, FileText, House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Sparkles, Wand2, type LucideIcon } from 'lucide-react';
 import Calendar from './calendar';
 import ContentDrawer from './content-drawer';
 import { SHOOT_TEAM } from '../lib/shoot-team';
@@ -11,7 +11,7 @@ import { getUpcomingShoots, upcomingDayLabel } from '../lib/upcoming-shoots';
 import { newTaskDraft, TaskBoard, TaskDrawer, TaskRow, type TaskDraft } from './tasks';
 import { urgentTasks, type Task, type TaskFolder } from '../lib/tasks';
 import { AiStudio, AutoplanPanel, BackupPanel, IntegrationsPanel } from './workspace-panels';
-import { api, bangkokToday, dayLabel, monthLabel, newContentDraft, shiftMonth, type ClientAccess, type ContentDraft, type ContentItem, type Shoot } from './workspace-types';
+import { api, bangkokToday, dayLabel, monthLabel, newContentDraft, type ClientAccess, type ContentDraft, type ContentItem, type Shoot } from './workspace-types';
 import { TeamPanel } from './team-panel';
 import { NotificationBell, type NoteItem } from './notifications';
 
@@ -21,7 +21,6 @@ const NAV: [Section, LucideIcon, string][] = [
   ['approval', BadgeCheck, 'Согласование'], ['ai', Sparkles, 'Higgsfield AI'], ['settings', SettingsIcon, 'Настройки'],
 ];
 const color = (name: string) => SHOOT_TEAM.find(t => t[0] === name)?.[2] ?? '#889';
-const pct = (v: number | null) => v === null ? '—' : `${Math.round(v * 1000) / 10}%`.replace('.', ',');
 
 export default function Workspace({ access }: { access: ClientAccess }) {
   const { caps } = access;
@@ -221,28 +220,39 @@ function planTableRow(i: PlanRow, { canEdit, today, shoots, onOpen, onReschedule
     </td>
   </tr>;
 }
-function planTable(list: PlanRow[], ctx: RowCtx) {
+type SortKey = 'date' | 'title' | 'primaryMember' | 'type' | 'status';
+const SORT_COLS: { key: SortKey; label: string }[] = [
+  { key: 'date', label: 'Дата' }, { key: 'title', label: 'Название' }, { key: 'primaryMember', label: 'Ведущий' }, { key: 'type', label: 'Тип' }, { key: 'status', label: 'Этап' },
+];
+function planTable(list: PlanRow[], ctx: RowCtx, sortCtx?: { sort: { key: SortKey; dir: 1 | -1 }; onSort: (k: SortKey) => void }) {
   return <div className="table-wrap"><table className="ntable plan-table">
-    <thead><tr><th>Дата</th><th>Название</th><th>Ведущий</th><th>Тип</th><th>Этап</th></tr></thead>
+    <thead><tr>{SORT_COLS.map(c => sortCtx
+      ? <th key={c.key} className="sortable" onClick={() => sortCtx.onSort(c.key)}>{c.label}{sortCtx.sort.key === c.key ? (sortCtx.sort.dir === 1 ? ' ▲' : ' ▼') : ''}</th>
+      : <th key={c.key}>{c.label}</th>)}</tr></thead>
     <tbody>{list.map(i => planTableRow(i, ctx))}</tbody></table></div>;
 }
 
-/** Контент-план: a Notion-like list of the month (no calendar grid), members with auto counts, and the pay card. */
-function ContentPlan({ items, allItems, shoots, summary, month, setMonth, canEdit, access, onOpen, onReschedule, onQuick, onAdd, onReload }: { items: ContentItem[]; allItems: ContentItem[]; shoots: Shoot[]; summary: Summary; month: string; setMonth: (m: string) => void; canEdit: boolean; access: ClientAccess; onOpen: (i: ContentItem) => void; onReschedule: (i: ContentItem, d: string | null) => void; onQuick: (i: ContentItem, to: ContentStatus) => void; onAdd: (d: string | null) => void; onReload: () => void }) {
+const STAGE_SORT_ORDER: Record<string, number> = { planned: 0, shot: 1, editing: 1, awaiting_feedback: 2, approved: 3 };
+
+/** Контент-план: members card, a month calendar, and one flat sortable list of everything still in the pipeline — no month switcher, Данил found it confusing to keep searching across months. */
+function ContentPlan({ items, allItems, shoots, summary, month, canEdit, access, onOpen, onReschedule, onQuick, onAdd, onReload }: { items: ContentItem[]; allItems: ContentItem[]; shoots: Shoot[]; summary: Summary; month: string; setMonth: (m: string) => void; canEdit: boolean; access: ClientAccess; onOpen: (i: ContentItem) => void; onReschedule: (i: ContentItem, d: string | null) => void; onQuick: (i: ContentItem, to: ContentStatus) => void; onAdd: (d: string | null) => void; onReload: () => void }) {
   const [autoplanOpen, setAutoplanOpen] = useState(false);
   const [type, setType] = useState<'all' | 'reel' | 'youtube'>('all');
   const [who, setWho] = useState('');
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'status', dir: 1 });
   const shown = items.filter(i => (type === 'all' || i.type === type) && (!who || i.primaryMember === who));
-  const dateOf = (i: ContentItem) => i.productionStatus === 'published' && i.publishedAt ? i.publishedAt : i.plannedPublishDate;
-  const inMonth: PlanRow[] = shown.map(i => ({ ...i, date: dateOf(i) })).filter(i => i.date?.startsWith(month)).sort((a, b) => (a.date! + a.title).localeCompare(b.date! + b.title));
-  const bank: PlanRow[] = shown.filter(i => !i.plannedPublishDate && i.productionStatus !== 'published' && i.productionStatus !== 'cancelled').map(i => ({ ...i, date: null }));
   const today = bangkokToday();
   const ctx: RowCtx = { canEdit, today, shoots, onOpen, onReschedule, onQuick };
   const shotTotal = summary.members.reduce((a, m) => a + m.shot, 0);
   // Month plan by lead: Reels with a publication date in this month (published ones included), as a share of all of them.
   const planParts = summary.members.map(m => ({ member: m.member, n: m.scheduled })).filter(p => p.n > 0);
   const planTotal = planParts.reduce((a, p) => a + p.n, 0);
-  const table = (list: PlanRow[]) => planTable(list, ctx);
+
+  // Always-on list of everything still in the pipeline (not published, not cancelled), across all months — sortable, not month-filtered.
+  const pipeline: PlanRow[] = shown.filter(i => i.productionStatus !== 'published' && i.productionStatus !== 'cancelled').map(i => ({ ...i, date: i.plannedPublishDate }));
+  const sortVal = (i: PlanRow): string | number => sort.key === 'date' ? (i.date ?? '9999-99-99') : sort.key === 'status' ? (STAGE_SORT_ORDER[i.productionStatus] ?? 9) : i[sort.key];
+  const sorted = [...pipeline].sort((a, b) => { const av = sortVal(a), bv = sortVal(b); return av < bv ? -sort.dir : av > bv ? sort.dir : 0; });
+  const onSort = (key: SortKey) => setSort(s => s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 });
 
   return <div className="content-plan">
     {autoplanOpen && <AutoplanPanel key={month} month={month} onClose={() => setAutoplanOpen(false)} onApplied={onReload} />}
@@ -250,33 +260,26 @@ function ContentPlan({ items, allItems, shoots, summary, month, setMonth, canEdi
       <section className="members-card"><div className="card-head"><h2>Участники · {monthLabel(month)}</h2>
         <span className="hint">Снято {shotTotal} · выложено {summary.reels.published} из {summary.reels.target} Reels</span></div>
         <div className="table-wrap"><table className="ntable members-table">
-          <thead><tr><th>Участник</th><th>План</th><th>Снято</th><th>Доля</th><th>Выложено</th><th>Доля</th><th>Осталось</th></tr></thead>
+          <thead><tr><th>Участник</th><th>План</th><th>Снято</th><th>Выложено</th><th>Осталось</th></tr></thead>
           <tbody>{summary.members.filter(m => m.target > 0 || m.shot > 0 || m.published > 0 || m.scheduled > 0).map(m => <tr key={m.member}>
             <td><span className="person"><i className="dot" style={{ background: color(m.member) }} />{m.member}</span></td>
-            <td>{m.target}</td><td><b>{m.shot}</b></td><td className="share"><Share v={m.shotShare} c={color(m.member)} /></td>
-            <td><b>{m.published}</b></td><td className="share"><Share v={m.publishedShare} c={color(m.member)} /></td><td>{m.remaining}</td></tr>)}</tbody>
+            <td>{m.target}</td><td><b>{m.shot}</b></td><td><b>{m.published}</b></td><td>{m.remaining}</td></tr>)}</tbody>
         </table></div>
         {planTotal > 0 && <div className="plan-split" aria-label="Кто сколько выходит в этом месяце"><div className="split-bar">{planParts.map(p => <i key={p.member} style={{ flex: p.n, background: color(p.member) }} title={`${p.member}: ${p.n}`} />)}</div>
           <ul className="split-legend">{planParts.map(p => <li key={p.member}><i className="dot" style={{ background: color(p.member) }} />{p.member} <b>{Math.round(p.n / planTotal * 100)}%</b> <small>{p.n}</small></li>)}</ul>
         </div>}
       </section>
-      <MiniCalendar month={month} rows={inMonth} today={today} />
+      <MiniCalendar month={month} allItems={allItems} today={today} />
     </div>
 
     <div className="plan-bar">
-      <div className="month"><button className="icon-btn" aria-label="Предыдущий месяц" onClick={() => setMonth(shiftMonth(month, -1))}><ChevronLeft size={16} /></button><h2>{monthLabel(month)}</h2>
-        <button className="icon-btn" aria-label="Следующий месяц" onClick={() => setMonth(shiftMonth(month, 1))}><ChevronRight size={16} /></button>
-        {month !== today.slice(0, 7) && <button className="ghost-btn" onClick={() => setMonth(today.slice(0, 7))}>Сегодня</button>}</div>
       <div className="plan-tools"><div className="seg">{(['all', 'reel', 'youtube'] as const).map(t => <button key={t} className={type === t ? 'on' : ''} onClick={() => setType(t)}>{t === 'all' ? 'Все' : CONTENT_TYPE_LABELS[t]}</button>)}</div>
         {canEdit && !autoplanOpen && <button className="ghost-btn" onClick={() => setAutoplanOpen(true)}><Wand2 size={14} /> Автоплан</button>}</div>
     </div>
     <div className="who-chips" role="group" aria-label="Ведущий"><button type="button" className={'who-chip ' + (who === '' ? 'on' : '')} onClick={() => setWho('')}>Все ведущие</button>
       {summary.members.filter(m => m.target > 0 || m.published > 0 || m.scheduled > 0).map(m => <button type="button" key={m.member} className={'who-chip ' + (who === m.member ? 'on' : '')} onClick={() => setWho(who === m.member ? '' : m.member)}><i className="dot" style={{ background: color(m.member) }} />{m.member}</button>)}</div>
-    {inMonth.length ? table(inMonth) : <p className="empty-line big">В этом месяце роликов нет.</p>}
-    {canEdit && <button className="add-row" onClick={() => onAdd(month === today.slice(0, 7) ? today : month + '-01')}><Plus size={14} /> Новый ролик</button>}
-
-    <h3 className="group-title">Без даты <span>{bank.length}</span></h3>
-    {bank.length ? table(bank) : <p className="empty-line">Все ролики распределены по датам.</p>}
+    {sorted.length ? planTable(sorted, ctx, { sort, onSort }) : <p className="empty-line big">В работе ничего нет.</p>}
+    {canEdit && <button className="add-row" onClick={() => onAdd(today)}><Plus size={14} /> Новый ролик</button>}
   </div>;
 }
 
@@ -291,30 +294,55 @@ function monthCalendarCells(month: string): (string | null)[] {
   return cells;
 }
 
-function MiniCalendar({ month, rows, today }: { month: string; rows: PlanRow[]; today: string }) {
-  const byDate = new Map<string, PlanRow[]>();
-  for (const r of rows) { if (!r.date) continue; byDate.set(r.date, [...(byDate.get(r.date) ?? []), r]); }
+type AutoSlot = { date: string; member: string; kind: 'assign' | 'new' | 'empty'; itemId: string | null; title: string };
+type CalEntry = { member: string; title: string; ready: boolean };
+
+/** Loads the live Автоплан projection for a month: proposed/placeholder slots for days nothing is dated yet. Never writes anything. */
+function useAutoplanSlots(month: string): AutoSlot[] {
+  const [slots, setSlots] = useState<AutoSlot[]>([]);
+  useEffect(() => {
+    let live = true;
+    api<{ slots: AutoSlot[] }>(`/api/content/autoplan?month=${month}&fillEmpty=1`).then(r => { if (live) setSlots(r.slots); }).catch(() => { if (live) setSlots([]); });
+    return () => { live = false; };
+  }, [month]);
+  return slots;
+}
+
+function MiniCalendar({ month, allItems, today }: { month: string; allItems: ContentItem[]; today: string }) {
+  const auto = useAutoplanSlots(month);
+  const dateOf = (i: ContentItem) => i.productionStatus === 'published' && i.publishedAt ? i.publishedAt : i.plannedPublishDate;
+  const byDate = new Map<string, CalEntry[]>();
+  for (const i of allItems) {
+    if (i.productionStatus === 'cancelled') continue;
+    const d = dateOf(i);
+    if (!d || !d.startsWith(month)) continue;
+    const ready = i.productionStatus === 'approved' || i.productionStatus === 'published';
+    byDate.set(d, [...(byDate.get(d) ?? []), { member: i.primaryMember, title: i.title, ready }]);
+  }
+  // Fill in placeholders from the live Автоплан for days nothing is dated yet — Данил wants to see who's due even before anything is shot.
+  for (const s of auto) {
+    if (!s.date.startsWith(month)) continue;
+    const already = byDate.get(s.date) ?? [];
+    if (already.some(e => e.member === s.member)) continue;
+    const title = s.kind === 'assign' ? `${s.title} (дата не закреплена)` : 'ещё не снято';
+    byDate.set(s.date, [...already, { member: s.member, title, ready: false }]);
+  }
   const cells = monthCalendarCells(month);
   const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
   return <aside className="mini-cal">
-    <div className="card-head"><h2>Календарь</h2></div>
+    <div className="card-head"><h2>Календарь · {monthLabel(month)}</h2></div>
     <div className="mini-cal-grid">
       {weekdays.map(w => <span key={w} className="mini-cal-wd">{w}</span>)}
       {cells.map((date, idx) => {
         const list = date ? byDate.get(date) ?? [] : [];
         return <div key={idx} className={'mini-cal-cell' + (date ? '' : ' empty') + (date === today ? ' today' : '')}>
           {date && <><span className="mini-cal-day">{Number(date.slice(8))}</span>
-            <span className="mini-cal-dots">{list.slice(0, 5).map((r, i) => <i key={i} className="dot" style={{ background: color(r.primaryMember) }} title={`${r.primaryMember}: ${r.title}`} />)}
-              {list.length > 5 && <small>+{list.length - 5}</small>}</span></>}
+            <div className="mini-cal-items">{list.map((e, i) => <span key={i} className={'mc-item ' + (e.ready ? 'ready' : 'pending')} style={{ '--c': color(e.member) } as React.CSSProperties} title={`${e.member}: ${e.title}`}>{e.member}</span>)}</div></>}
         </div>;
       })}
     </div>
     <ul className="mini-cal-legend">{SHOOT_TEAM.map(([name]) => <li key={name}><i className="dot" style={{ background: color(name) }} />{name}</li>)}</ul>
   </aside>;
-}
-
-function Share({ v, c }: { v: number | null; c: string }) {
-  return v === null ? <span className="muted">—</span> : <span className="share-bar"><i style={{ width: Math.round(v * 100) + '%', background: c }} /><span>{pct(v)}</span></span>;
 }
 
 type Block = { key: string; title: string; hint: string; statuses: ContentStatus[] };
@@ -362,7 +390,6 @@ function Settings({ plan, revision, canEdit, access, onReload, onSaved }: { plan
         <div className="fields">
           <label>Reels в месяц<input type="number" min={0} max={200} value={draft.reelsPerMonth} onChange={e => setDraft({ ...draft, reelsPerMonth: num(e.target.value) })} /></label>
           <label>YouTube в месяц<input type="number" min={0} max={50} value={draft.youtubePerMonth} onChange={e => setDraft({ ...draft, youtubePerMonth: num(e.target.value) })} /></label>
-          <label>Юля, интервал, дней<input type="number" min={1} max={15} value={draft.yuliaIntervalDays} onChange={e => setDraft({ ...draft, yuliaIntervalDays: Math.max(1, Math.min(15, num(e.target.value))) })} /></label>
         </div>
         <div className="member-targets">{SHOOT_TEAM.map(([name]) => <label key={name}><span><i className="dot" style={{ background: color(name) }} />{name}</span>
           <input type="number" min={0} max={200} value={draft.members[name] ?? 0} onChange={e => setDraft({ ...draft, members: { ...draft.members, [name]: num(e.target.value) } })} /></label>)}</div>
