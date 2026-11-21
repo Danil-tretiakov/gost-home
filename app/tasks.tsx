@@ -212,6 +212,26 @@ export function TaskBoard({ tasks, folders, shoots, items, onOpen, onSaved, onFo
   </div>;
 }
 
+/** Plain «ЧЧ:ММ» field: Safari's native time input is unreliable when controlled, so type digits (colon is added), or tap a quick hour. */
+function TimeField({ value, disabled, onChange }: { value: string | null; disabled?: boolean; onChange: (v: string | null) => void }) {
+  const [raw, setRaw] = useState(value ?? '');
+  useEffect(() => { setRaw(value ?? ''); }, [value]);
+  const valid = (v: string) => /^([01]?\d|2[0-3]):[0-5]\d$/.test(v);
+  const norm = (v: string) => v.length === 4 ? '0' + v : v;
+  function edit(input: string) {
+    const digits = input.replace(/\D/g, '').slice(0, 4);
+    const text = /^\d{1,2}:\d{0,2}$/.test(input) ? input : digits.length > 2 ? digits.slice(0, 2) + ':' + digits.slice(2) : digits.length === 2 && input.endsWith(':') ? digits + ':' : digits;
+    setRaw(text);
+    if (!text) onChange(null);
+    else if (valid(text)) onChange(norm(text));
+  }
+  return <div className="time-field">
+    <input inputMode="numeric" placeholder="ЧЧ:ММ" maxLength={5} disabled={disabled} value={raw} onChange={e => edit(e.target.value)} onBlur={() => { if (!valid(raw)) setRaw(value ?? ''); }} />
+    <div className="time-quick">{['09:00', '12:00', '15:00', '18:00', '21:00'].map(h => <button type="button" key={h} disabled={disabled} className={value === h ? 'on' : ''} onClick={() => { setRaw(h); onChange(h); }}>{h}</button>)}
+      {value && <button type="button" disabled={disabled} onClick={() => { setRaw(''); onChange(null); }} aria-label="Очистить время">×</button>}</div>
+  </div>;
+}
+
 /** Editor for one task (new or existing). Archive/restore instead of delete. */
 export function TaskDrawer({ draft: initial, folders, shoots, items, onClose, onSaved, onOpenShoot, onOpenContent, readOnly = false }: {
   draft: TaskDraft; folders: TaskFolder[]; shoots: Shoot[]; items: ContentItem[]; onClose: () => void; onSaved: (t: Task) => void;
@@ -246,7 +266,7 @@ export function TaskDrawer({ draft: initial, folders, shoots, items, onClose, on
               style={{ background: d.status === st ? c.fill : undefined, color: d.status === st ? c.ink : undefined, borderColor: d.status === st ? c.dot : undefined }} onClick={() => setD({ ...d, status: st })}><i style={{ background: c.dot }} />{TASK_STATUS_LABELS[st]}</button>; })}</div></div>
           <div className="fields two">
             <label>Срок (дата)<input type="date" value={d.dueDate ?? ''} onChange={e => setD({ ...d, dueDate: e.target.value || null, dueTime: e.target.value ? d.dueTime : null })} /></label>
-            <label>До скольки<input type="time" value={d.dueTime ?? ''} disabled={!d.dueDate} onChange={e => setD({ ...d, dueTime: e.target.value || null })} /></label>
+            <div className="time-wrap"><span className="field-label">До скольки</span><TimeField value={d.dueTime ?? null} disabled={!d.dueDate} onChange={v => setD(cur => ({ ...cur, dueTime: v }))} /></div>
           </div>
           <label className="check flag-check"><input type="checkbox" checked={d.priority === 'high'} onChange={e => setD({ ...d, priority: e.target.checked ? 'high' : 'normal' })} /><Flag size={14} /> Важно</label>
           {(shoot || item) && <div className="row-actions start">{shoot && onOpenShoot && <button type="button" className="link-button" onClick={() => onOpenShoot(shoot.id!)}>Открыть съёмку «{shoot.title}» →</button>}

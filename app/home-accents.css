@@ -32,3 +32,11 @@
 .countdown{flex:0 0 150px;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted);min-height:1px}
 .countdown.cd-calm{color:#4cc38a}.countdown.cd-soon{color:#f0b429}.countdown.cd-hot{color:#f59a5b}.countdown.cd-late{color:#f07070}
 .key-strip .countdown,.home-tasks .countdown{flex-basis:150px}
+
+/* Поле времени задачи */
+.time-wrap{display:flex;flex-direction:column;gap:6px}
+.time-field input{width:100%;font-variant-numeric:tabular-nums;font-size:16px}
+.time-quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.time-quick button{border:1px solid var(--card-line,rgba(255,255,255,.12));background:transparent;color:var(--muted);border-radius:7px;padding:3px 9px;font-size:12px;cursor:pointer}
+.time-quick button.on{background:rgba(76,195,138,.18);color:#4cc38a;border-color:rgba(76,195,138,.5)}
+.time-quick button:hover:not(:disabled){color:var(--ink)}
