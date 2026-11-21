@@ -266,7 +266,7 @@ export function TaskDrawer({ draft: initial, folders, shoots, items, onClose, on
               style={{ background: d.status === st ? c.fill : undefined, color: d.status === st ? c.ink : undefined, borderColor: d.status === st ? c.dot : undefined }} onClick={() => setD({ ...d, status: st })}><i style={{ background: c.dot }} />{TASK_STATUS_LABELS[st]}</button>; })}</div></div>
           <div className="fields two">
             <label>Срок (дата)<input type="date" value={d.dueDate ?? ''} onChange={e => setD({ ...d, dueDate: e.target.value || null, dueTime: e.target.value ? d.dueTime : null })} /></label>
-            <div className="time-wrap"><span className="field-label">До скольки</span><TimeField value={d.dueTime ?? null} disabled={!d.dueDate} onChange={v => setD(cur => ({ ...cur, dueTime: v }))} /></div>
+            <div className="time-wrap"><span className="field-label">До скольки</span><TimeField value={d.dueTime ?? null} onChange={v => setD(cur => ({ ...cur, dueTime: v, dueDate: v && !cur.dueDate ? bangkokNow().date : cur.dueDate }))} /></div>
           </div>
           <label className="check flag-check"><input type="checkbox" checked={d.priority === 'high'} onChange={e => setD({ ...d, priority: e.target.checked ? 'high' : 'normal' })} /><Flag size={14} /> Важно</label>
           {(shoot || item) && <div className="row-actions start">{shoot && onOpenShoot && <button type="button" className="link-button" onClick={() => onOpenShoot(shoot.id!)}>Открыть съёмку «{shoot.title}» →</button>}
