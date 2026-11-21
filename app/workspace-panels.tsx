@@ -301,7 +301,7 @@ function ProjectView({ project, ai, items, busy, post, onRefreshJob, onUploaded 
     </li>)}</ul> : <p className="hint">Материалов пока нет.</p>}
 
     <h3>Генерация через API</h3>
-    {!ai.configured ? <p className="hint">Не подключено: на сервере нет HF_API_KEY_ID и HF_API_KEY_SECRET. Запуски недоступны.</p> : <div className="launch">
+    {!ai.configured ? <p className="hint">Не подключено: на сервере нет секрета HF_API_KEY (ключ Higgsfield целиком, «id:secret»). Запуски недоступны.</p> : <div className="launch">
       <label>Модель<select value={endpoint} onChange={e => setEndpoint(e.target.value)}>{ai.presets.map(x => <option key={x.endpoint} value={x.endpoint}>{x.label}</option>)}</select></label>
       {preset?.kind === 'video' && <>
         <label>Длительность<select value={videoOpts.duration} onChange={e => setVideoOpts({ ...videoOpts, duration: e.target.value })}>{['5', '10', '15'].map(v => <option key={v} value={v}>{v} с</option>)}</select></label>
@@ -341,7 +341,7 @@ export function IntegrationsPanel({ canEdit, onContentChanged }: { canEdit: bool
     {!canEdit ? <p className="hint">Статус интеграций видит редактор.</p> : !data ? (error ? <p role="alert" className="error">{error}</p> : <p className="hint">Загружаем…</p>) : <>
       <ul className="integrations">
         <li><b>Higgsfield AI</b><span className={'pill ' + (data.higgsfield.configured ? 's-approved' : '')}>{data.higgsfield.configured ? 'Ключ на сервере есть' : 'Не подключено'}</span>
-          <small>{data.higgsfield.configured ? 'Запуски в разделе Higgsfield AI, с подтверждением и лимитом.' : 'Нужны секреты HF_API_KEY_ID и HF_API_KEY_SECRET на сервере. Ручная работа в студии доступна.'}</small></li>
+          <small>{data.higgsfield.configured ? 'Запуски в разделе Higgsfield AI, с подтверждением и лимитом.' : 'Нужен секрет HF_API_KEY на сервере (ключ Higgsfield целиком). Ручная работа в студии доступна.'}</small></li>
         <li><b>Хранилище файлов AI</b><span className={'pill ' + (data.storage?.connected ? 's-approved' : '')}>{data.storage?.connected ? 'Подключено' : 'Не подключено'}</span>
           <small>{data.storage?.connected ? `Закрытое хранилище проекта: файлы открываются только участникам с доступом.${data.storage.linkSigning ? ' Подписанные ссылки для видео-запусков включены.' : ' Для запуска видео с загруженного кадра нужен секрет FILE_LINK_SECRET.'}` : 'Нужна привязка r2 BUCKET в настройках хостинга. Без неё файлы добавляются ссылками.'}</small></li>
         <li><b>Instagram</b><span className={'pill ' + (ig!.status === 'connected' ? 's-approved' : ig!.status === 'error' ? 's-changes_requested' : '')}>{!ig!.configured ? 'Не подключено' : ig!.status === 'connected' ? 'Подключено' : ig!.status === 'error' ? 'Ошибка' : 'Не подключено'}</span>

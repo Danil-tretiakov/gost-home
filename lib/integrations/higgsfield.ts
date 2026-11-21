@@ -1,8 +1,10 @@
 import { secret } from './env';
 import { HIGGSFIELD_BASE, parseResponse, safeStatusUrl, type JobUpdate } from './higgsfield-core';
 
-export function higgsfieldConfigured() { return !!(secret('HF_API_KEY_ID') && secret('HF_API_KEY_SECRET')); }
+export function higgsfieldConfigured() { return !!(secret('HF_API_KEY') || (secret('HF_API_KEY_ID') && secret('HF_API_KEY_SECRET'))); }
 function auth() {
+  const whole = secret('HF_API_KEY');
+  if (whole) return `Key ${whole}`;
   const id = secret('HF_API_KEY_ID'); const sec = secret('HF_API_KEY_SECRET');
   if (!id || !sec) throw new Error('not_configured');
   return `Key ${id}:${sec}`;
