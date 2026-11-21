@@ -224,7 +224,6 @@ export function TaskDrawer({ draft: initial, folders, shoots, items, onClose, on
   }
   const shoot = shoots.find(s => s.id === d.shootId);
   const item = items.find(i => i.id === d.contentId);
-  const folderOptions = folders.filter(x => !x.archivedAt || x.id === d.folderId).sort((a, b) => a.sort - b.sort || a.createdAt.localeCompare(b.createdAt));
   return <div className="drawer-backdrop" onClick={e => { if (e.target === e.currentTarget && !busy) onClose(); }}>
     <section className="drawer" role="dialog" aria-modal="true" aria-labelledby="task-title">
       <div className="drawer-head"><div><div className="eyebrow">Задача{isNew ? ' · новая' : archived ? ' · в архиве' : ''}</div>
@@ -233,12 +232,6 @@ export function TaskDrawer({ draft: initial, folders, shoots, items, onClose, on
       <form onSubmit={e => { e.preventDefault(); run(isNew ? 'create' : 'update', isNew); }}>
         <fieldset disabled={busy || archived || readOnly} className="edit-fields">
           <label>Что сделать<input required autoFocus={isNew} maxLength={200} value={d.title} onChange={e => setD({ ...d, title: e.target.value })} /></label>
-          <div className="fields">
-            <label>Срок<input type="date" value={d.dueDate ?? ''} onChange={e => setD({ ...d, dueDate: e.target.value || null, dueTime: e.target.value ? d.dueTime : null })} /></label>
-            <label>Время<input type="time" value={d.dueTime ?? ''} disabled={!d.dueDate} onChange={e => setD({ ...d, dueTime: e.target.value || null })} /></label>
-            <label>Папка<select value={d.folderId ?? ''} onChange={e => setD({ ...d, folderId: e.target.value || null })}><option value="">Без папки</option>
-              {folderOptions.map(x => <option key={x.id} value={x.id}>{x.name}{x.archivedAt ? ' (убрана)' : ''}</option>)}</select></label>
-          </div>
           <div className="status-field" role="radiogroup" aria-label="Статус"><span className="field-label">Статус</span>
             <div className="status-choices">{TASK_STATUSES.map(st => { const c = TASK_STATUS_COLORS[st]; return <button type="button" key={st} role="radio" aria-checked={d.status === st} className={'status-choice ' + (d.status === st ? 'on' : '')}
               style={{ background: d.status === st ? c.fill : undefined, color: d.status === st ? c.ink : undefined, borderColor: d.status === st ? c.dot : undefined }} onClick={() => setD({ ...d, status: st })}><i style={{ background: c.dot }} />{TASK_STATUS_LABELS[st]}</button>; })}</div></div>
