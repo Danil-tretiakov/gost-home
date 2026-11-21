@@ -334,11 +334,14 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets, yu
     if (d < today || byDateMember.has(d)) continue;
     if (isYuliaDay(d)) { byDateMember.set(d, new Map([['Юля', { title: 'нужно подготовить ролик', ready: false, planned: true }]])); continue; }
     const dn = dayNum(d);
-    const pick = Object.keys(targets).filter(m => m !== 'Юля' && targets[m] > 0 && (realCount[m] ?? 0) + (planned[m] ?? 0) < targets[m]).map(m => {
+    const cand = Object.keys(targets).filter(m => m !== 'Юля' && targets[m] > 0 && (realCount[m] ?? 0) + (planned[m] ?? 0) < targets[m]).map(m => {
       const interval = Math.max(1, Math.round(days.length / targets[m]));
       const dist = Math.min(...(anchors[m] ?? [dayNum(today)]).map(a => Math.abs(dn - a)));
       return { m, dist, interval, ok: dist >= Math.max(2, Math.ceil(interval * 0.8)), score: dist / interval };
-    }).filter(c => c.ok).sort((x, y) => y.score - x.score)[0]?.m;
+    });
+    const byScore = (a: { score: number }, b: { score: number }) => b.score - a.score;
+    // сначала строго по интервалу; если никто не подходит, закрываем день тем, кто дальше всех от своих роликов (не вплотную)
+    const pick = (cand.filter(c => c.ok).sort(byScore)[0] ?? cand.filter(c => c.dist >= 2).sort(byScore)[0])?.m;
     if (!pick) continue;
     planned[pick] = (planned[pick] ?? 0) + 1;
     (anchors[pick] ??= []).push(dn);
