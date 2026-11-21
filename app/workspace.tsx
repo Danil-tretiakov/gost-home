@@ -334,7 +334,9 @@ function MiniCalendar({ month: startMonth, allItems, today, members, targets, yu
     if (d < today || byDateMember.has(d)) continue;
     if (isYuliaDay(d)) { byDateMember.set(d, new Map([['Юля', { title: 'нужно подготовить ролик', ready: false, planned: true }]])); continue; }
     const dn = dayNum(d);
-    const cand = Object.keys(targets).filter(m => m !== 'Юля' && targets[m] > 0 && (realCount[m] ?? 0) + (planned[m] ?? 0) < targets[m]).map(m => {
+    // Договорённость с Данилом: Андрей в ноябре 2026 только 30-го.
+    if (d === '2026-11-30' && 'Андрей' in targets) { planned['Андрей'] = (planned['Андрей'] ?? 0) + 1; (anchors['Андрей'] ??= []).push(dn); byDateMember.set(d, new Map([['Андрей', { title: 'нужно подготовить ролик', ready: false, planned: true }]])); continue; }
+    const cand = Object.keys(targets).filter(m => m !== 'Юля' && !(m === 'Андрей' && d.startsWith('2026-11')) && targets[m] > 0 && (realCount[m] ?? 0) + (planned[m] ?? 0) < targets[m]).map(m => {
       const interval = Math.max(1, Math.round(days.length / targets[m]));
       const dist = Math.min(...(anchors[m] ?? [dayNum(today)]).map(a => Math.abs(dn - a)));
       return { m, dist, interval, ok: dist >= Math.max(2, Math.ceil(interval * 0.8)), score: dist / interval };
