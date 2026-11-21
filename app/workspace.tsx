@@ -137,7 +137,7 @@ export default function Workspace({ access }: { access: ClientAccess }) {
           <Settings key={planRevision} plan={plan} revision={planRevision} canEdit={canEdit} access={access} onReload={load} onSaved={(p, r) => { setPlan(p); setPlanRevision(r); }} />}
       </main>}
 
-    {drawer && <ContentDrawer key={drawer.id} draft={drawer} shoots={shoots} canEdit={canEdit} canReview={caps.review} canReadInternal={internal} onClose={() => setDrawer(null)} onSaved={item => { upsert(item); }}
+    {drawer && <ContentDrawer key={drawer.id} draft={drawer} shoots={shoots} canEdit={canEdit} canReview={caps.review} canReadInternal={internal} autoDate={d => nextFreeDay(items, d.primaryMember, today)} onClose={() => setDrawer(null)} onSaved={item => { upsert(item); }}
       onOpenShoot={id => { setDrawer(null); setOpenShootId(id); go('shoots'); }} />}
     {taskDraft && <TaskDrawer key={taskDraft.id + (taskDraft.revision ?? 'new')} draft={taskDraft} folders={taskFolders} shoots={shoots} items={items} readOnly={!canEdit} onClose={() => setTaskDraft(null)} onSaved={upsertTask}
       onOpenShoot={id => { setTaskDraft(null); setDrawer(null); setOpenShootId(id); go('shoots'); }} onOpenContent={item => { setTaskDraft(null); open(item); }} />}
@@ -154,6 +154,19 @@ function titleOf(s: Section) {
 }
 
 type Summary = ReturnType<typeof monthSummary>;
+
+/** Nearest free publish day after today: no other dated reel that day and none of the same lead within 2 days. */
+function nextFreeDay(items: ContentItem[], member: string, today: string): string | null {
+  const dayNum = (x: string) => Math.round(Date.parse(x + 'T00:00:00Z') / 864e5);
+  const dated = items.filter(i => i.productionStatus !== 'cancelled' && i.plannedPublishDate).map(i => ({ n: dayNum(i.plannedPublishDate as string), m: i.primaryMember }));
+  const t = dayNum(today);
+  for (let n = t + 1; n < t + 120; n++) {
+    if (dated.some(x => x.n === n)) continue;
+    if (dated.some(x => x.m === member && Math.abs(x.n - n) < 3)) continue;
+    return new Date(n * 864e5).toISOString().slice(0, 10);
+  }
+  return null;
+}
 
 const WHY_TONE: Record<string, string> = { 'Нужны правки': 'tone-red', 'Ждёт согласования': 'tone-blue', 'Слот не обеспечен': 'tone-amber' };
 
