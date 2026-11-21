@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, CalendarDays, ChevronDown, Clapperboard, Clock, CornerDownLeft, Film, Flag, Folder, FolderOpen, ListTodo, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Archive, CalendarDays, ChevronDown, Clapperboard, Clock, CornerDownLeft, Film, Flag, Flame, Folder, FolderOpen, ListTodo, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { TASK_STATUSES, TASK_STATUS_COLORS, TASK_STATUS_LABELS, bangkokNow, filterTasks, isOverdue, sortTasks, urgentTasks, type Task, type TaskFilter, type TaskFolder, type TaskStatus } from '../lib/tasks';
 import { addDays, parseQuickTask, type QuickToken } from '../lib/tasks-parse';
 import { api, type ContentItem, type Shoot } from './workspace-types';
@@ -156,16 +156,6 @@ export function TaskBoard({ tasks, folders, shoots, items, onOpen, onSaved, onFo
     </div>
 
     <div className="planner-page">
-      {key.length > 0 && <section className="key-strip" aria-label="Ключевое"><h3>Ключевое сейчас</h3>
-        <ul className="task-list compact">{key.map(t => <TaskRow key={t.id} t={t} links={{}} onOpen={() => onOpen({ ...t })} onStatus={readOnly ? undefined : st => update(t, { status: st })} />)}</ul></section>}
-
-      <div className="folder-title">{rename !== null && currentFolder
-        ? <form onSubmit={renameFolder}><input autoFocus maxLength={60} aria-label="Новое название папки" value={rename} onChange={e => setRename(e.target.value)} onBlur={renameFolder} /></form>
-        : <h2>{current === 'all' ? 'Все задачи' : current === 'none' ? 'Без папки' : currentFolder?.name}</h2>}
-        {currentFolder && !readOnly && rename === null && <span className="folder-tools">
-          <button type="button" className="icon-btn" aria-label="Переименовать папку" title="Переименовать" onClick={() => setRename(currentFolder.name)}><Pencil size={14} /></button>
-          <button type="button" className="icon-btn" aria-label="Убрать папку" title="Убрать папку" onClick={archiveFolder}><Trash2 size={14} /></button></span>}</div>
-
       {!readOnly && <form className="quick-add" onSubmit={quickAdd}>
         <div className="quick-line"><span className="quick-plus" aria-hidden>+</span>
           <input aria-label="Новая задача" placeholder={`Новая задача${currentFolder ? ' в «' + currentFolder.name + '»' : ''}… например: «Смонтировать ролик завтра в 15:00 !»`} maxLength={240} value={text} onChange={e => setText(e.target.value)} />
@@ -178,6 +168,16 @@ export function TaskBoard({ tasks, folders, shoots, items, onOpen, onSaved, onFo
           <button type="button" className="link-button" onClick={() => onOpen(newTaskDraft({ title: parsed.title, dueDate: parsed.dueDate, dueTime: parsed.dueTime, priority: parsed.priority, folderId: currentFolder?.id ?? null }))}>Подробнее…</button>
         </div>}
       </form>}
+
+      {key.length > 0 && <section className="key-strip" aria-label="Ключевое"><h3><span className="ic tone-red sm2"><Flame size={14} aria-hidden /></span>Ключевое сейчас <span className="count red">{key.length}</span></h3>
+        <ul className="task-list compact">{key.map(t => <TaskRow key={t.id} t={t} links={{}} onOpen={() => onOpen({ ...t })} onStatus={readOnly ? undefined : st => update(t, { status: st })} />)}</ul></section>}
+
+      <div className="folder-title">{rename !== null && currentFolder
+        ? <form onSubmit={renameFolder}><input autoFocus maxLength={60} aria-label="Новое название папки" value={rename} onChange={e => setRename(e.target.value)} onBlur={renameFolder} /></form>
+        : <h2>{current === 'all' ? 'Все задачи' : current === 'none' ? 'Без папки' : currentFolder?.name}</h2>}
+        {currentFolder && !readOnly && rename === null && <span className="folder-tools">
+          <button type="button" className="icon-btn" aria-label="Переименовать папку" title="Переименовать" onClick={() => setRename(currentFolder.name)}><Pencil size={14} /></button>
+          <button type="button" className="icon-btn" aria-label="Убрать папку" title="Убрать папку" onClick={archiveFolder}><Trash2 size={14} /></button></span>}</div>
 
       <div className="planner-bar">
         <label className="search-box"><Search size={14} aria-hidden /><input aria-label="Поиск задач" placeholder="Поиск" value={f.query} onChange={e => setF({ ...f, query: e.target.value })} /></label>
