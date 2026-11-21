@@ -86,7 +86,7 @@ export default function Workspace({ access }: { access: ClientAccess }) {
   }, [items, query]);
 
   async function quickStatus(item: ContentItem, to: ContentStatus) {
-    try { upsert(await api<ContentItem>('/api/content/status', { method: 'POST', json: { id: item.id, revision: item.revision, to } })); }
+    try { upsert(await api<ContentItem>('/api/content/status', { method: 'POST', json: { id: item.id, revision: item.revision, to, publishedAt: to === 'published' ? bangkokToday() : undefined } })); }
     catch (e) { setError((e as Error).message); }
   }
   async function reschedule(item: ContentItem, date: string | null) {
@@ -202,8 +202,7 @@ function Kpi({ icon: Icon, tone, label, value, of, note, onClick }: { icon: Luci
 
 type PlanRow = ContentItem & { date: string | null };
 type RowCtx = { canEdit: boolean; today: string; shoots: Shoot[]; onOpen: (i: ContentItem) => void; onReschedule: (i: ContentItem, d: string | null) => void; onQuick: (i: ContentItem, to: ContentStatus) => void };
-// Published needs a date; that still opens the full item. Approving is instant, and changes_requested is no longer a stage (see lib/review-turn.ts).
-const needsConfirm = (s: ContentStatus) => s === 'published';
+// «Выложено» saves instantly with today's date (Bangkok); the exact date can be corrected in the item. changes_requested is no longer a stage (see lib/review-turn.ts).
 
 /** One row of the shared Notion-like table: a date, the item, and an inline stage select that moves it between groups. Used by both Контент-план (grouped by month) and Согласование (grouped by stage). */
 function planTableRow(i: PlanRow, { canEdit, today, shoots, onOpen, onReschedule, onQuick }: RowCtx) {
@@ -219,7 +218,7 @@ function planTableRow(i: PlanRow, { canEdit, today, shoots, onOpen, onReschedule
     <td className="c-status" onClick={e => canEdit && e.stopPropagation()}>
       {canEdit
         ? <select className={'pill-select s-' + i.productionStatus} value={i.productionStatus}
-            onChange={e => { const to = e.target.value as ContentStatus; if (to === i.productionStatus) return; needsConfirm(to) ? onOpen(i) : onQuick(i, to); }}>
+            onChange={e => { const to = e.target.value as ContentStatus; if (to === i.productionStatus) return; onQuick(i, to); }}>
             <option value={i.productionStatus}>{CONTENT_STATUS_LABELS[i.productionStatus]}</option>
             {allowedTransitions(i.productionStatus).map(s => <option key={s} value={s}>{CONTENT_STATUS_LABELS[s]}</option>)}
           </select>
