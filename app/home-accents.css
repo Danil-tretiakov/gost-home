@@ -40,3 +40,6 @@
 .time-quick button{border:1px solid var(--card-line,rgba(255,255,255,.12));background:transparent;color:var(--muted);border-radius:7px;padding:3px 9px;font-size:12px;cursor:pointer}
 .time-quick button.on{background:rgba(76,195,138,.18);color:#4cc38a;border-color:rgba(76,195,138,.5)}
 .time-quick button:hover:not(:disabled){color:var(--ink)}
+
+.auto-date{display:flex;flex-direction:column;gap:6px;justify-content:flex-start}
+.auto-date .hint{font-size:14px;padding:9px 0;color:#4cc38a}

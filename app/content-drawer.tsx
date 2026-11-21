@@ -30,6 +30,8 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
   const [versions, setVersions] = useState<{ versions: Version[]; comments: Comment[] } | null>(null);
   const [versionsTick, setVersionsTick] = useState(0);
   const isNew = draft.revision === undefined;
+  // A new item opened without an explicit day (not from a calendar «+») gets its publish day automatically.
+  const [autoPlace] = useState(initial.revision === undefined && !initial.plannedPublishDate);
 
   useEffect(() => {
     if (isNew) return;
@@ -53,7 +55,7 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
     e.preventDefault();
     setBusy(true); setError('');
     try {
-      const body = isNew && !draft.plannedPublishDate && autoDate ? { ...draft, plannedPublishDate: autoDate(draft) } : draft;
+      const body = autoPlace && autoDate ? { ...draft, plannedPublishDate: autoDate(draft) } : draft;
       const saved = await api<ContentItem>('/api/content', { method: 'POST', json: body });
       onSaved(saved); setDraft({ ...saved });
     } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
@@ -121,7 +123,7 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
         <fieldset disabled={!canEdit || busy} className="edit-fields">
           <div className={isNew ? 'fields' : 'fields two'}>
             <label>Тип<select value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value as ContentDraft['type'] })}><option value="reel">Reels</option><option value="youtube">YouTube</option></select></label>
-            <label>{isNew ? 'Дата публикации (необязательно)' : 'Дата публикации (план)'}<input type="date" title={isNew ? 'Если оставить пустой, дата подберётся автоматически' : undefined} value={draft.plannedPublishDate ?? ''} onChange={e => setDraft({ ...draft, plannedPublishDate: e.target.value || null })} /></label>
+            {autoPlace ? <div className="auto-date"><span className="field-label">Дата публикации</span><span className="hint">подберётся автоматически</span></div> : <label>Дата публикации (план)<input type="date" value={draft.plannedPublishDate ?? ''} onChange={e => setDraft({ ...draft, plannedPublishDate: e.target.value || null })} /></label>}
             {isNew && <label>Этап<select value={draft.productionStatus} onChange={e => setDraft({ ...draft, productionStatus: e.target.value as ContentStatus })}>
               {CONTENT_STATUSES.filter(s => s !== 'published' && s !== 'paused' && s !== 'cancelled' && s !== 'changes_requested').map(s => <option key={s} value={s}>{CONTENT_STATUS_LABELS[s]}</option>)}
             </select></label>}
