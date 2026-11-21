@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { Archive, CalendarDays, ChevronDown, Clapperboard, Clock, CornerDownLeft, Film, Flag, Flame, Folder, FolderOpen, ListTodo, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
-import { TASK_STATUSES, TASK_STATUS_COLORS, TASK_STATUS_LABELS, bangkokNow, filterTasks, isOverdue, sortTasks, urgentTasks, type Task, type TaskFilter, type TaskFolder, type TaskStatus } from '../lib/tasks';
+import { TASK_STATUSES, TASK_STATUS_COLORS, TASK_STATUS_LABELS, bangkokNow, filterTasks, countdown, isOverdue, sortTasks, urgentTasks, type Task, type TaskFilter, type TaskFolder, type TaskStatus } from '../lib/tasks';
 import { addDays, parseQuickTask, type QuickToken } from '../lib/tasks-parse';
 import { api, type ContentItem, type Shoot } from './workspace-types';
 
@@ -9,6 +9,12 @@ export type TaskDraft = Omit<Task, 'revision' | 'completedAt' | 'archivedAt' | '
 export const newTaskDraft = (p: Partial<TaskDraft> = {}): TaskDraft => ({
   id: crypto.randomUUID(), title: '', notes: '', assignee: null, dueDate: null, dueTime: null, priority: 'normal', status: 'todo', shootId: null, contentId: null, folderId: null, ...p,
 });
+/** Re-renders every 30s so countdowns stay live. */
+function useNow(ms = 30_000) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const id = setInterval(() => setNow(new Date()), ms); return () => clearInterval(id); }, [ms]);
+  return now;
+}
 const weekdayDate = (d: string) => new Date(d + 'T12:00').toLocaleDateString('ru', { weekday: 'short', day: 'numeric', month: 'short' });
 
 /** Saves through the API. On 409 the current server copy is returned so the editor can show it. */
@@ -40,9 +46,12 @@ export function StatusPill({ status, onPick }: { status: TaskStatus; onPick?: (s
 export function TaskRow({ t, links, onOpen, onStatus, draggable }: { t: Task; links: { shoot?: string; content?: string }; onOpen: () => void; onStatus?: (s: TaskStatus) => void; draggable?: boolean }) {
   const today = bangkokNow().date;
   const done = t.status === 'done' || t.status === 'cancelled';
-  const overdue = isOverdue(t);
+  const now = useNow();
+  const overdue = isOverdue(t, now);
+  const cd = !done && !t.archivedAt ? countdown(t, now) : null;
   return <li className={'task-row s-' + t.status + (t.archivedAt ? ' archived' : '') + (t.priority === 'high' ? ' p-high' : '')} draggable={draggable}
     onDragStart={draggable ? e => { e.dataTransfer.setData('text/task', t.id); e.dataTransfer.effectAllowed = 'move'; } : undefined}>
+    <span className={'countdown' + (cd ? ' cd-' + cd.tone : '')} aria-label={cd ? 'До срока: ' + cd.text : undefined}>{cd && <><Clock size={12} aria-hidden />{cd.text}</>}</span>
     {onStatus && !t.archivedAt
       ? <button type="button" className={'tick ' + (done ? 'on' : '')} aria-label={t.status === 'done' ? 'Вернуть в работу' : 'Отметить выполненной'} aria-pressed={t.status === 'done'}
         disabled={t.status === 'cancelled'} onClick={() => onStatus(t.status === 'done' ? 'todo' : 'done')}><svg viewBox="0 0 16 16" aria-hidden><path d="M4 8.5l2.5 2.5L12 5.5" /></svg></button>
@@ -235,6 +244,10 @@ export function TaskDrawer({ draft: initial, folders, shoots, items, onClose, on
           <div className="status-field" role="radiogroup" aria-label="Статус"><span className="field-label">Статус</span>
             <div className="status-choices">{TASK_STATUSES.map(st => { const c = TASK_STATUS_COLORS[st]; return <button type="button" key={st} role="radio" aria-checked={d.status === st} className={'status-choice ' + (d.status === st ? 'on' : '')}
               style={{ background: d.status === st ? c.fill : undefined, color: d.status === st ? c.ink : undefined, borderColor: d.status === st ? c.dot : undefined }} onClick={() => setD({ ...d, status: st })}><i style={{ background: c.dot }} />{TASK_STATUS_LABELS[st]}</button>; })}</div></div>
+          <div className="fields two">
+            <label>Срок (дата)<input type="date" value={d.dueDate ?? ''} onChange={e => setD({ ...d, dueDate: e.target.value || null, dueTime: e.target.value ? d.dueTime : null })} /></label>
+            <label>До скольки<input type="time" value={d.dueTime ?? ''} disabled={!d.dueDate} onChange={e => setD({ ...d, dueTime: e.target.value || null })} /></label>
+          </div>
           <label className="check flag-check"><input type="checkbox" checked={d.priority === 'high'} onChange={e => setD({ ...d, priority: e.target.checked ? 'high' : 'normal' })} /><Flag size={14} /> Важно</label>
           {(shoot || item) && <div className="row-actions start">{shoot && onOpenShoot && <button type="button" className="link-button" onClick={() => onOpenShoot(shoot.id!)}>Открыть съёмку «{shoot.title}» →</button>}
             {item && onOpenContent && <button type="button" className="link-button" onClick={() => onOpenContent(item)}>Открыть ролик «{item.title}» →</button>}</div>}

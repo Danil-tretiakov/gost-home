@@ -26,3 +26,9 @@
 .key-strip{border-color:rgba(240,112,112,.5)!important;background:color-mix(in srgb,#f07070 7%,var(--card))!important}
 .key-strip h3{display:flex;align-items:center;gap:8px;color:#f0a0a0!important;margin-bottom:6px!important}
 .key-strip h3 .count{margin-left:0}
+
+/* Обратный отсчёт в задачах */
+.task-row{align-items:center}
+.countdown{flex:0 0 150px;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted);min-height:1px}
+.countdown.cd-calm{color:#4cc38a}.countdown.cd-soon{color:#f0b429}.countdown.cd-hot{color:#f59a5b}.countdown.cd-late{color:#f07070}
+.key-strip .countdown,.home-tasks .countdown{flex-basis:150px}

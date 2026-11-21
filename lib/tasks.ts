@@ -104,3 +104,18 @@ export function urgentTasks<T extends Task>(list: T[], now = new Date(), limit =
   const soon = addDays(bangkokNow(now).date, 2);
   return sortTasks(list.filter(t => open(t) && (isOverdue(t, now) || (t.dueDate && t.dueDate <= soon) || t.priority === 'high')), now).slice(0, limit);
 }
+
+
+export type Countdown = { text: string; tone: 'late' | 'hot' | 'soon' | 'calm' };
+/** Live countdown to a task deadline (Bangkok time; no time = end of day). Days+hours, then hours+minutes, then minutes; after the deadline «просрочено на …». */
+export function countdown(t: Pick<Task, 'dueDate' | 'dueTime'>, now = new Date()): Countdown | null {
+  if (!t.dueDate) return null;
+  const end = Date.parse(`${t.dueDate}T${t.dueTime || '23:59'}:00+07:00`);
+  if (Number.isNaN(end)) return null;
+  const late = end < now.getTime();
+  const mins = Math.max(0, Math.floor(Math.abs(end - now.getTime()) / 60_000));
+  const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
+  const span = d > 0 ? `${d} д ${h} ч` : h > 0 ? `${h} ч ${m} мин` : `${Math.max(m, late ? 1 : 0)} мин`;
+  if (late) return { text: `просрочено ${span}`, tone: 'late' };
+  return { text: span, tone: mins < 180 ? 'hot' : mins < 1440 ? 'soon' : 'calm' };
+}
