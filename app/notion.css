@@ -352,20 +352,3 @@ button.tick:hover{border-color:var(--accent);background:var(--accent-soft)}butto
 
 .event-sharing.top{border-top:0;border-bottom:1px solid #deddd9;margin:0 0 16px;padding:0 0 14px}
 
-/* Home: icons and accents */
-.ic{width:30px;height:30px;border-radius:9px;display:inline-grid;place-items:center;flex:0 0 auto}
-.ic.sm{width:26px;height:26px;border-radius:7px;margin-right:10px}
-.tone-green{background:rgba(46,160,110,.16);color:#2f9468}
-.tone-blue{background:rgba(35,131,226,.15);color:#2b73c4}
-.tone-amber{background:rgba(224,157,31,.18);color:#b97d0c}
-.tone-red{background:rgba(224,82,82,.15);color:#cc4040}
-.ph{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.kpi-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.kpi strong{font-size:34px}
-.count{margin-left:auto;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;line-height:20px}
-.count.red{background:rgba(224,82,82,.18);color:#cc4040}.count.amber{background:rgba(224,157,31,.2);color:#b97d0c}
-.panel.attn{border-color:rgba(224,157,31,.5);background:rgba(224,157,31,.05)}
-.panel.urgent{border-color:rgba(224,82,82,.45);background:rgba(224,82,82,.05)}
-.panel.urgent .panel-head,.panel .panel-head .ph{margin-bottom:0}
-.date-chip{background:var(--hover);border-radius:8px;padding:4px 9px;font-weight:500;color:var(--ink-2);min-width:68px;text-align:center}
-.attn .row{align-items:center}

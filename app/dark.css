@@ -186,13 +186,6 @@ button.kpi:hover{background:#121210;border-color:#2b2b28}
 .who-chip{background:#0f0f0f}
 .who-chip:hover{background:#131311}
 .event-sharing.top{border-bottom:1px solid #2d2d2b}
-.tone-green{color:#91d4b7}
-.tone-blue{color:#89b0dc}
-.tone-amber{color:#ecc479}
-.tone-red{background:rgba(69,31,31,0.15);color:#d88d8d}
-.count.red{background:rgba(69,31,31,0.18);color:#d88d8d}
-.count.amber{color:#ecc479}
-.panel.urgent{border-color:rgba(95,53,53,0.45);background:rgba(69,31,31,0.05)}
 
 /* hand-written: lift "card" blocks off the page background so they read as distinct surfaces */
 .event,.cchip,.acard,.linked-item,.status-box,.versions,.linked-tasks,.linked-content,.week-day,.stat,.status-menu,.status-choice,.upcoming-card,.panel{
