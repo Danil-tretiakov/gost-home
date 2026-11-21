@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Clapperboard, FileText, House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Wand2, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, CalendarClock, Camera, Clapperboard, FileText, Film, Flame, Hammer, Hourglass, PackageCheck, PenLine, TriangleAlert,  House, ListChecks, LogOut, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings as SettingsIcon, Wand2, type LucideIcon } from 'lucide-react';
 import Calendar from './calendar';
 import ContentDrawer from './content-drawer';
 import { SHOOT_TEAM } from '../lib/shoot-team';
@@ -155,6 +155,8 @@ function titleOf(s: Section) {
 
 type Summary = ReturnType<typeof monthSummary>;
 
+const WHY_TONE: Record<string, string> = { 'Нужны правки': 'tone-red', 'Ждёт согласования': 'tone-blue', 'Слот не обеспечен': 'tone-amber' };
+
 function Home({ summary, items, shoots, today, month, onOpen, onOpenShoot, onGo, taskList, onOpenTask }: { summary: Summary; items: ContentItem[]; shoots: Shoot[]; today: string; month: string; onOpen: (i: ContentItem) => void; onOpenShoot: (id: string) => void; onGo: (s: Section) => void; taskList: Task[] | null; onOpenTask: (t: TaskDraft) => void }) {
   const urgent = taskList ? urgentTasks(taskList) : [];
   const upcomingShoots = getUpcomingShoots(shoots, new Date(), 3);
@@ -167,33 +169,33 @@ function Home({ summary, items, shoots, today, month, onOpen, onOpenShoot, onGo,
   ].filter(t => t.i).slice(0, 6);
   return <div className="home">
     <div className="kpis">
-      <Kpi label={`Reels · ${monthLabel(month)}`} value={summary.reels.published} of={summary.reels.target} note={`запланировано ${summary.reels.scheduled}`} />
-      <Kpi label="В производстве" value={summary.inProduction} note={`${summary.awaitingFeedback} ждёт согласования · ${summary.changesRequested} на правках`} onClick={() => onGo('content')} />
-      <Kpi label="Готовый запас" value={summary.readyStock} note={summary.coverage.upcomingSlots ? `обеспечено слотов подряд: ${summary.coverage.coveredSlots} из ${summary.coverage.upcomingSlots}` : 'будущих слотов нет'} onClick={() => onGo('content')} />
+      <Kpi icon={Film} tone="green" label={`Reels · ${monthLabel(month)}`} value={summary.reels.published} of={summary.reels.target} note={`запланировано ${summary.reels.scheduled}`} />
+      <Kpi icon={Hammer} tone="blue" label="В производстве" value={summary.inProduction} note={`${summary.awaitingFeedback} ждёт согласования · ${summary.changesRequested} на правках`} onClick={() => onGo('content')} />
+      <Kpi icon={PackageCheck} tone="amber" label="Готовый запас" value={summary.readyStock} note={summary.coverage.upcomingSlots ? `обеспечено слотов подряд: ${summary.coverage.coveredSlots} из ${summary.coverage.upcomingSlots}` : 'будущих слотов нет'} onClick={() => onGo('content')} />
     </div>
-    {taskList && <section className="panel home-tasks"><div className="panel-head"><h2>Срочные задачи</h2><button className="link-button" onClick={() => onGo('tasks')}>Задачник →</button></div>
+    {taskList && <section className={'panel home-tasks' + (urgent.length ? ' urgent' : '')}><div className="panel-head"><h2 className="ph"><span className="ic tone-red"><Flame size={16} aria-hidden /></span>Срочные задачи{urgent.length > 0 && <span className="count red">{urgent.length}</span>}</h2><button className="link-button" onClick={() => onGo('tasks')}>Задачник →</button></div>
       {urgent.length ? <ul className="task-list compact">{urgent.map(t => <TaskRow key={t.id} t={t} links={{ shoot: shoots.find(s => s.id === t.shootId)?.title, content: items.find(i => i.id === t.contentId)?.title }} onOpen={() => onOpenTask({ ...t })} />)}</ul>
         : <p className="hint">Просроченных, срочных и важных незавершённых задач нет.</p>}</section>}
     <div className="home-grid">
-      <section className="panel"><h2>Ближайшие съёмки</h2>
+      <section className="panel"><h2 className="ph"><span className="ic tone-blue"><Camera size={16} aria-hidden /></span>Ближайшие съёмки</h2>
         {upcomingShoots.length ? <ul className="rows">{upcomingShoots.map(s => <li key={s.id}><button className="row" onClick={() => onOpenShoot(s.id!)}>
-          <span className="row-date">{upcomingDayLabel(s.date, new Date())}<small>{s.time}</small></span><span className="row-main">{s.title}<small>{s.participants.join(' · ')}</small></span></button></li>)}</ul>
+          <span className="row-date date-chip">{upcomingDayLabel(s.date, new Date())}<small>{s.time}</small></span><span className="row-main">{s.title}<small>{s.participants.join(' · ')}</small></span></button></li>)}</ul>
           : <p className="hint">Запланированных съёмок нет.</p>}</section>
-      <section className="panel"><h2>Ближайшие публикации</h2>
+      <section className="panel"><h2 className="ph"><span className="ic tone-green"><CalendarCheck size={16} aria-hidden /></span>Ближайшие публикации</h2>
         {upcomingPubs.length ? <ul className="rows">{upcomingPubs.map(i => <li key={i.id}><button className="row" onClick={() => onOpen(i)}>
-          <span className="row-date">{dayLabel(i.plannedPublishDate!)}</span><span className="row-main">{i.title}<small>{i.primaryMember}{i.type === 'youtube' ? ' · YouTube' : ''}</small></span>
+          <span className="row-date date-chip">{dayLabel(i.plannedPublishDate!)}</span><span className="row-main">{i.title}<small>{i.primaryMember}{i.type === 'youtube' ? ' · YouTube' : ''}</small></span>
           <span className={'pill s-' + i.productionStatus}>{CONTENT_STATUS_LABELS[i.productionStatus]}</span></button></li>)}</ul>
           : <p className="hint">В контент-плане нет будущих дат. <button className="link-button" onClick={() => onGo('content')}>Открыть контент-план →</button></p>}</section>
-      <section className="panel"><h2>Требует действия</h2>
+      <section className={'panel' + (tasks.length ? ' attn' : '')}><h2 className="ph"><span className="ic tone-amber"><TriangleAlert size={16} aria-hidden /></span>Требует действия{tasks.length > 0 && <span className="count amber">{tasks.length}</span>}</h2>
         {tasks.length ? <ul className="rows">{tasks.map(({ i, why }) => <li key={i.id + why}><button className="row" onClick={() => onOpen(i)}>
-          <span className="row-main">{i.title}<small>{why}{i.plannedPublishDate ? ' · публикация ' + dayLabel(i.plannedPublishDate) : ''}</small></span></button></li>)}</ul>
+          <span className={'ic sm ' + WHY_TONE[why]}>{why === 'Нужны правки' ? <PenLine size={14} aria-hidden /> : why === 'Ждёт согласования' ? <Hourglass size={14} aria-hidden /> : <CalendarClock size={14} aria-hidden />}</span><span className="row-main">{i.title}<small>{why}{i.plannedPublishDate ? ' · публикация ' + dayLabel(i.plannedPublishDate) : ''}</small></span></button></li>)}</ul>
           : <p className="hint">Срочных задач нет.</p>}</section>
     </div>
   </div>;
 }
 
-function Kpi({ label, value, of, note, onClick }: { label: string; value: number; of?: number; note?: string; onClick?: () => void }) {
-  const body = <><span className="kpi-label">{label}</span><strong>{value}{of !== undefined && <small> / {of}</small>}</strong>
+function Kpi({ icon: Icon, tone, label, value, of, note, onClick }: { icon: LucideIcon; tone: string; label: string; value: number; of?: number; note?: string; onClick?: () => void }) {
+  const body = <><span className="kpi-top"><span className={'ic tone-' + tone}><Icon size={17} aria-hidden /></span><span className="kpi-label">{label}</span></span><strong>{value}{of !== undefined && <small> / {of}</small>}</strong>
     {of !== undefined && of > 0 && <div className="bar" aria-hidden><i style={{ width: Math.min(100, value / of * 100) + '%' }} /></div>}{note && <small className="kpi-note">{note}</small>}</>;
   return onClick ? <button className="kpi" onClick={onClick}>{body}</button> : <div className="kpi">{body}</div>;
 }
