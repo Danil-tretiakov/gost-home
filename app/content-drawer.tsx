@@ -114,11 +114,6 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
         </div>}
       </section>}
 
-      {!isNew && canReadInternal && showMontage && <VersionsBox contentId={draft.id} revision={draft.revision!} data={versions} disabled={busy} canAdd={canEdit} canComment={canEdit || canReview}
-        canRequestChanges={canReview && draft.productionStatus === 'awaiting_feedback'}
-        onAdded={r => { const next = { ...draft, revision: r.revision, driveUrl: r.driveUrl, updatedAt: r.updatedAt, updatedBy: r.updatedBy } as ContentItem; setDraft(next); onSaved(next); setVersionsTick(t => t + 1); }}
-        onCommented={() => setVersionsTick(t => t + 1)} />}
-
       <form onSubmit={save}>
         <fieldset disabled={!canEdit || busy} className="edit-fields">
           <div className={isNew ? 'fields' : 'fields two'}>
@@ -139,7 +134,6 @@ export default function ContentDrawer({ draft: initial, shoots, canEdit, canRevi
               <input type="checkbox" checked={draft.participants.includes(name)} onChange={e => setDraft({ ...draft, participants: e.target.checked ? [...draft.participants, name] : draft.participants.filter(p => p !== name) })} />{name}</label>)}
           </fieldset>
           <label>Объекты и локации (для внутренней работы, через запятую)<input maxLength={2000} value={draft.places.join(', ')} onChange={e => setDraft({ ...draft, places: e.target.value.split(',').map(s => s.trimStart()) })} /></label>
-          {draft.driveUrl && /^https:\/\//.test(draft.driveUrl) && <a className="link-button" href={draft.driveUrl} target="_blank" rel="noreferrer noopener">Открыть монтаж ↗</a>}
           <label>Сценарий, описание, референсы<textarea rows={6} maxLength={10000} value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} /></label>
         </fieldset>
         {error && <p role="alert" className="error">{error}</p>}
