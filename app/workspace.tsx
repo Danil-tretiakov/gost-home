@@ -201,7 +201,7 @@ function Home({ summary, items, shoots, today, month, onOpen, onOpenShoot, onGo,
           : <p className="hint">В контент-плане нет будущих дат. <button className="link-button" onClick={() => onGo('content')}>Открыть контент-план →</button></p>}</section>
       <section className={'panel' + (tasks.length ? ' attn' : '')}><h2 className="ph"><span className="ic tone-amber"><TriangleAlert size={16} aria-hidden /></span>Требует действия{tasks.length > 0 && <span className="count amber">{tasks.length}</span>}</h2>
         {tasks.length ? <ul className="rows">{tasks.map(({ i, why }) => <li key={i.id + why}><button className="row" onClick={() => onOpen(i)}>
-          <span className={'ic sm ' + WHY_TONE[why]}>{why === 'Нужны правки' ? <PenLine size={14} aria-hidden /> : why === 'Ждёт согласования' ? <Hourglass size={14} aria-hidden /> : <CalendarClock size={14} aria-hidden />}</span><span className="row-main">{i.title}<small>{why}{i.plannedPublishDate ? ' · публикация ' + dayLabel(i.plannedPublishDate) : ''}</small></span></button></li>)}</ul>
+          <span className={'ic sm ' + WHY_TONE[why]}>{why === 'Нужны правки' ? <PenLine size={14} aria-hidden /> : why === 'Ждёт согласования' ? <Hourglass size={14} aria-hidden /> : <CalendarClock size={14} aria-hidden />}</span><span className="row-main">{i.title}<small title={why}>{[why === 'Слот не обеспечен' ? null : why, [i.primaryMember, ...i.participants].join(', '), i.plannedPublishDate ? 'публикация ' + dayLabel(i.plannedPublishDate) : null].filter(Boolean).join(' · ')}</small></span></button></li>)}</ul>
           : <p className="hint">Срочных задач нет.</p>}</section>
     </div>
   </div>;
