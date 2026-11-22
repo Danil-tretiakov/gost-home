@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, CalendarDays, ChevronDown, Clapperboard, Clock, CornerDownLeft, Film, Flag, Flame, Folder, FolderOpen, ListTodo, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
-import { TASK_STATUSES, TASK_STATUS_COLORS, TASK_STATUS_LABELS, bangkokNow, filterTasks, countdown, isOverdue, sortTasks, urgentTasks, type Task, type TaskFilter, type TaskFolder, type TaskStatus } from '../lib/tasks';
-import { addDays, parseQuickTask, type QuickToken } from '../lib/tasks-parse';
+import { Archive, CalendarDays, ChevronDown, Clapperboard, Clock, Film, Flag, Folder, FolderOpen, ListTodo, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { TASK_STATUSES, TASK_STATUS_COLORS, TASK_STATUS_LABELS, bangkokNow, filterTasks, countdown, isOverdue, sortTasks, type Task, type TaskFilter, type TaskFolder, type TaskStatus } from '../lib/tasks';
+import { addDays } from '../lib/tasks-parse';
 import { api, type ContentItem, type Shoot } from './workspace-types';
 
 export type TaskDraft = Omit<Task, 'revision' | 'completedAt' | 'archivedAt' | 'archivedBy' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'> & Partial<Task>;
@@ -44,9 +44,9 @@ export function StatusPill({ status, onPick }: { status: TaskStatus; onPick?: (s
 
 /** One task line: round checkbox, title, then status, date and flag as quiet chips. */
 export function TaskRow({ t, links, onOpen, onStatus, draggable }: { t: Task; links: { shoot?: string; content?: string }; onOpen: () => void; onStatus?: (s: TaskStatus) => void; draggable?: boolean }) {
-  const today = bangkokNow().date;
   const done = t.status === 'done' || t.status === 'cancelled';
   const now = useNow();
+  const today = bangkokNow().date;
   const overdue = isOverdue(t, now);
   const cd = !done && !t.archivedAt ? countdown(t, now) : null;
   return <li className={'task-row s-' + t.status + (t.archivedAt ? ' archived' : '') + (t.priority === 'high' ? ' p-high' : '')} draggable={draggable}
@@ -70,7 +70,6 @@ export function TaskRow({ t, links, onOpen, onStatus, draggable }: { t: Task; li
 }
 
 const EMPTY: TaskFilter = { assignee: '', status: '', due: 'all', link: 'all', query: '', archived: false };
-const KIND_ICON = { date: <CalendarDays size={12} />, time: <Clock size={12} />, priority: <Flag size={12} /> };
 
 type View = 'all' | 'none' | string; // 'all', 'none' (no folder) or a folder id
 const GROUPS: [TaskStatus, string][] = [['todo', 'К выполнению'], ['in_progress', 'В работе']];
@@ -81,19 +80,14 @@ export function TaskBoard({ tasks, folders, shoots, items, onOpen, onSaved, onFo
 }) {
   const [f, setF] = useState<TaskFilter>(EMPTY);
   const [view, setView] = useState<View>('all');
-  const [text, setText] = useState('');
-  const [skip, setSkip] = useState<Set<QuickToken['kind']>>(new Set());
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [overFolder, setOverFolder] = useState<string | null>(null);
   const [newFolder, setNewFolder] = useState<string | null>(null);
   const [rename, setRename] = useState<string | null>(null);
-  const today = bangkokNow().date;
   const live = useMemo(() => folders.filter(x => !x.archivedAt).sort((a, b) => a.sort - b.sort || a.createdAt.localeCompare(b.createdAt)), [folders]);
   const liveIds = useMemo(() => new Set(live.map(x => x.id)), [live]);
   const folderOf = (t: Task) => (t.folderId && liveIds.has(t.folderId) ? t.folderId : null); // a task in an archived folder shows as «Без папки»
   const current = view !== 'all' && view !== 'none' && !liveIds.has(view) ? 'all' : view;
-  const parsed = useMemo(() => parseQuickTask(text, today, skip), [text, today, skip]);
   const shootTitle = (id: string | null) => (id ? shoots.find(s => s.id === id)?.title : undefined);
   const contentTitle = (id: string | null) => (id ? items.find(i => i.id === id)?.title : undefined);
   const matched = useMemo(() => filterTasks(tasks, f, new Date(), t => `${shootTitle(t.shootId) ?? ''} ${contentTitle(t.contentId) ?? ''}`),
@@ -104,18 +98,9 @@ export function TaskBoard({ tasks, folders, shoots, items, onOpen, onSaved, onFo
   const isOpen = (t: Task) => t.status === 'todo' || t.status === 'in_progress';
   const closed = shown.filter(t => !isOpen(t)).sort((a, b) => (b.completedAt ?? b.updatedAt).localeCompare(a.completedAt ?? a.updatedAt));
   const count = (pred: (t: Task) => boolean) => tasks.filter(t => !t.archivedAt && isOpen(t) && pred(t)).length;
-  const key = useMemo(() => urgentTasks(tasks.filter(t => !t.archivedAt), new Date(), 4), [tasks]);
   const archivedCount = tasks.filter(t => t.archivedAt).length;
   const currentFolder = live.find(x => x.id === current);
 
-  async function quickAdd(e: React.FormEvent) {
-    e.preventDefault(); if (!parsed.title) return;
-    setBusy(true); setError('');
-    try {
-      onSaved(await saveTask(newTaskDraft({ title: parsed.title.slice(0, 200), dueDate: parsed.dueDate, dueTime: parsed.dueTime, priority: parsed.priority, folderId: currentFolder?.id ?? null }), 'create'));
-      setText(''); setSkip(new Set());
-    } catch (err) { setError((err as Error).message); } finally { setBusy(false); }
-  }
   async function update(t: Task, patch: Partial<Task>) {
     setError('');
     try { onSaved(await saveTask({ ...t, ...patch }, 'update')); } catch (err) { setError((err as Error).message); }
@@ -165,22 +150,6 @@ export function TaskBoard({ tasks, folders, shoots, items, onOpen, onSaved, onFo
     </div>
 
     <div className="planner-page">
-      {!readOnly && <form className="quick-add" onSubmit={quickAdd}>
-        <div className="quick-line"><span className="quick-plus" aria-hidden>+</span>
-          <input aria-label="Новая задача" placeholder={`Новая задача${currentFolder ? ' в «' + currentFolder.name + '»' : ''}… например: «Смонтировать ролик завтра в 15:00 !»`} maxLength={240} value={text} onChange={e => setText(e.target.value)} />
-          {text.trim() && <button className="primary small" disabled={busy || !parsed.title}><CornerDownLeft size={14} /> Добавить</button>}</div>
-        {text.trim() && <div className="quick-preview">
-          {parsed.dueDate && <span className="tchip today">{KIND_ICON.date}{dueLabel(parsed, today)}</span>}
-          {parsed.priority === 'high' && <span className="tchip flag">{KIND_ICON.priority}Важно</span>}
-          {parsed.tokens.map(tk => <button type="button" key={tk.kind} className="tchip ghost" title="Не распознавать: оставить слова в названии" onClick={() => setSkip(new Set([...skip, tk.kind]))}>«{tk.text}» <X size={11} /></button>)}
-          {!parsed.tokens.length && <span className="quick-hint">Срок можно написать словами: сегодня, завтра, в пятницу, 25.11, через 3 дня, в 15:00. «!» или «срочно» = важно.</span>}
-          <button type="button" className="link-button" onClick={() => onOpen(newTaskDraft({ title: parsed.title, dueDate: parsed.dueDate, dueTime: parsed.dueTime, priority: parsed.priority, folderId: currentFolder?.id ?? null }))}>Подробнее…</button>
-        </div>}
-      </form>}
-
-      {key.length > 0 && <section className="key-strip" aria-label="Ключевое"><h3><span className="ic tone-red sm2"><Flame size={14} aria-hidden /></span>Ключевое сейчас <span className="count red">{key.length}</span></h3>
-        <ul className="task-list compact">{key.map(t => <TaskRow key={t.id} t={t} links={{}} onOpen={() => onOpen({ ...t })} onStatus={readOnly ? undefined : st => update(t, { status: st })} />)}</ul></section>}
-
       <div className="folder-title">{rename !== null && currentFolder
         ? <form onSubmit={renameFolder}><input autoFocus maxLength={60} aria-label="Новое название папки" value={rename} onChange={e => setRename(e.target.value)} onBlur={renameFolder} /></form>
         : <h2>{current === 'all' ? 'Все задачи' : current === 'none' ? 'Без папки' : currentFolder?.name}</h2>}
@@ -191,6 +160,7 @@ export function TaskBoard({ tasks, folders, shoots, items, onOpen, onSaved, onFo
       <div className="planner-bar">
         <label className="search-box"><Search size={14} aria-hidden /><input aria-label="Поиск задач" placeholder="Поиск" value={f.query} onChange={e => setF({ ...f, query: e.target.value })} /></label>
         <button type="button" className={'ghost-btn ' + (f.archived ? 'on' : '')} onClick={() => setF({ ...f, archived: !f.archived })}><Archive size={14} />{f.archived ? 'К плану' : `Архив${archivedCount ? ' · ' + archivedCount : ''}`}</button>
+        {!readOnly && <button type="button" className="ghost-btn" onClick={() => onOpen(newTaskDraft({ folderId: currentFolder?.id ?? null }))}><Plus size={14} />Задача</button>}
         {readOnly && <span className="hint">Только просмотр</span>}
       </div>
       {error && <p role="alert" className="error">{error}</p>}
@@ -198,7 +168,7 @@ export function TaskBoard({ tasks, folders, shoots, items, onOpen, onSaved, onFo
       {f.archived ? <section className="tsection"><h3>Архив <span>{shown.length}</span></h3>
         {shown.length ? <ul className="task-list">{shown.map(t => <TaskRow key={t.id} t={t} links={{}} onOpen={() => onOpen({ ...t })} />)}</ul> : <p className="empty-line">Архив пуст.</p>}</section>
         : <>
-          {!shown.length && !closed.length && <p className="empty-line big">{tasks.some(t => !t.archivedAt) ? 'В этой папке пока пусто. Напишите задачу строкой выше.' : 'Задач пока нет. Напишите первую строкой выше и нажмите Enter.'}</p>}
+          {!shown.length && !closed.length && <p className="empty-line big">{tasks.some(t => !t.archivedAt) ? 'В этой папке пока пусто.' : 'Задач пока нет.'}</p>}
           {GROUPS.map(([st, label]) => {
             const list = shown.filter(t => t.status === st);
             if (!list.length) return null;
